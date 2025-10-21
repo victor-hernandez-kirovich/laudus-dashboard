@@ -2,15 +2,38 @@ import { Header } from '@/components/layout/Header'
 import { StatCard, Card } from '@/components/ui/Card'
 import { TrendingUp, Users, DollarSign, Activity } from 'lucide-react'
 import Link from 'next/link'
+import { getDatabase } from '@/lib/mongodb'
 
 async function getHealthStatus() {
   try {
-    const res = await fetch(`${process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000'}/api/health`, {
-      cache: 'no-store'
-    })
-    if (!res.ok) return null
-    return res.json()
-  } catch {
+    const db = await getDatabase()
+    
+    // Obtener datos de las 3 colecciones
+    const [totalsDoc, standardDoc, columnsDoc] = await Promise.all([
+      db.collection('balance_totals').findOne(),
+      db.collection('balance_standard').findOne(),
+      db.collection('balance_8columns').findOne()
+    ])
+
+    return {
+      healthy: true,
+      collections: {
+        balance_totals: {
+          recordCount: totalsDoc?.data?.length || 0,
+          lastUpdate: totalsDoc?.insertedAt || null
+        },
+        balance_standard: {
+          recordCount: standardDoc?.data?.length || 0,
+          lastUpdate: standardDoc?.insertedAt || null
+        },
+        balance_8columns: {
+          recordCount: columnsDoc?.data?.length || 0,
+          lastUpdate: columnsDoc?.insertedAt || null
+        }
+      }
+    }
+  } catch (error) {
+    console.error('Error fetching MongoDB data:', error)
     return null
   }
 }
