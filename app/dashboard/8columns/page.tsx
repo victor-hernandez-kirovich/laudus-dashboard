@@ -1,11 +1,11 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, Fragment } from 'react'
 import { Header } from '@/components/layout/Header'
 import { Card } from '@/components/ui/Card'
 import { BalanceChart } from '@/components/charts/BalanceChart'
 import { DistributionChart } from '@/components/charts/DistributionChart'
-import { formatCurrency, formatDate } from '@/lib/utils'
+import { formatCurrency, formatDate, normalizeBalanceData } from '@/lib/utils'
 import { Activity, TrendingUp, Calendar, ChevronDown, ChevronRight } from 'lucide-react'
 
 export default function Balance8ColumnsPage() {
@@ -114,56 +114,86 @@ export default function Balance8ColumnsPage() {
 
         {/* Charts */}
         <div className='grid grid-cols-1 gap-6 lg:grid-cols-2'>
-          <BalanceChart data={records.slice(0, 10)} title='Top 10 Cuentas - Debe vs Haber' />
-          <DistributionChart data={records.slice(0, 6)} title='Distribución del Balance (Top 6)' />
+          <BalanceChart data={records.map(normalizeBalanceData).slice(0, 10)} title='Top 10 Cuentas - Debe vs Haber' />
+          <DistributionChart data={records.map(normalizeBalanceData).slice(0, 6)} title='Distribución del Balance (Top 6)' />
         </div>
 
-        {/* Data Table */}
+        {/* Data Table - 10 COLUMNAS TOTALES (solo datos de DB) */}
         <Card title='Datos del Balance 8 Columns' subtitle={`Total: ${records.length} registros`}>
           <div className='overflow-x-auto'>
             <table className='min-w-full divide-y divide-gray-200'>
               <thead className='bg-gray-50'>
                 <tr>
-                  <th className='hidden md:table-cell px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider'>
+                  <th className='hidden md:table-cell px-2 py-2 text-left text-xs font-medium text-gray-500 uppercase'>
                     Código
                   </th>
-                  <th className='hidden md:table-cell px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider'>
-                    Nombre de Cuenta
+                  <th className='hidden md:table-cell px-2 py-2 text-left text-xs font-medium text-gray-500 uppercase'>
+                    Nombre
                   </th>
-                  <th className='hidden md:table-cell px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider'>
+                  <th className='hidden md:table-cell px-2 py-2 text-right text-xs font-medium text-gray-500 uppercase'>
                     Debe
                   </th>
-                  <th className='hidden md:table-cell px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider'>
+                  <th className='hidden md:table-cell px-2 py-2 text-right text-xs font-medium text-gray-500 uppercase'>
                     Haber
                   </th>
-                  <th className='hidden md:table-cell px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider'>
-                    Balance
+                  <th className='hidden md:table-cell px-2 py-2 text-right text-xs font-medium text-blue-600 uppercase'>
+                    Bal.Deud
                   </th>
-                  <th className='md:hidden px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider'>
+                  <th className='hidden md:table-cell px-2 py-2 text-right text-xs font-medium text-red-600 uppercase'>
+                    Bal.Acree
+                  </th>
+                  <th className='hidden lg:table-cell px-2 py-2 text-right text-xs font-medium text-blue-600 uppercase'>
+                    Activos
+                  </th>
+                  <th className='hidden lg:table-cell px-2 py-2 text-right text-xs font-medium text-red-600 uppercase'>
+                    Pasivos
+                  </th>
+                  <th className='hidden lg:table-cell px-2 py-2 text-right text-xs font-medium text-orange-600 uppercase'>
+                    Gastos
+                  </th>
+                  <th className='hidden lg:table-cell px-2 py-2 text-right text-xs font-medium text-green-600 uppercase'>
+                    Ingresos
+                  </th>
+                  <th className='md:hidden px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase'>
                     Cuenta
                   </th>
                 </tr>
               </thead>
               <tbody className='bg-white divide-y divide-gray-200'>
-                {records.map((record: any, index: number) => (
-                  <>
+                {records.map(normalizeBalanceData).map((record: any, index: number) => (
+                    <Fragment key={index}>
                     {/* Fila principal */}
-                    <tr key={`row-${index}`} className='hover:bg-gray-50'>
-                      {/* Desktop: Todas las columnas */}
-                      <td className='hidden md:table-cell px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900'>
+                    <tr className='hover:bg-gray-50'>
+                      {/* Desktop: TODAS las 10 columnas (solo DB) */}
+                      <td className='hidden md:table-cell px-2 py-3 whitespace-nowrap text-xs font-medium text-gray-900'>
                         {record.accountCode}
                       </td>
-                      <td className='hidden md:table-cell px-6 py-4 text-sm text-gray-900'>
+                      <td className='hidden md:table-cell px-2 py-3 text-xs text-gray-900'>
                         {record.accountName}
                       </td>
-                      <td className='hidden md:table-cell px-6 py-4 whitespace-nowrap text-sm text-right text-gray-900'>
-                        {formatCurrency(record.debit)}
+                      <td className='hidden md:table-cell px-2 py-3 whitespace-nowrap text-xs text-right text-gray-900'>
+                        {formatCurrency(record.debit || 0)}
                       </td>
-                      <td className='hidden md:table-cell px-6 py-4 whitespace-nowrap text-sm text-right text-gray-900'>
-                        {formatCurrency(record.credit)}
+                      <td className='hidden md:table-cell px-2 py-3 whitespace-nowrap text-xs text-right text-gray-900'>
+                        {formatCurrency(record.credit || 0)}
                       </td>
-                      <td className='hidden md:table-cell px-6 py-4 whitespace-nowrap text-sm text-right font-medium text-gray-900'>
-                        {formatCurrency(record.balance)}
+                      <td className='hidden md:table-cell px-2 py-3 whitespace-nowrap text-xs text-right text-blue-700 font-medium'>
+                        {formatCurrency(record.debitBalance || 0)}
+                      </td>
+                      <td className='hidden md:table-cell px-2 py-3 whitespace-nowrap text-xs text-right text-red-700 font-medium'>
+                        {formatCurrency(record.creditBalance || 0)}
+                      </td>
+                      <td className='hidden lg:table-cell px-2 py-3 whitespace-nowrap text-xs text-right text-blue-700 font-medium'>
+                        {formatCurrency(record.assets || 0)}
+                      </td>
+                      <td className='hidden lg:table-cell px-2 py-3 whitespace-nowrap text-xs text-right text-red-700 font-medium'>
+                        {formatCurrency(record.liabilities || 0)}
+                      </td>
+                      <td className='hidden lg:table-cell px-2 py-3 whitespace-nowrap text-xs text-right text-orange-700 font-medium'>
+                        {formatCurrency(record.expenses || 0)}
+                      </td>
+                      <td className='hidden lg:table-cell px-2 py-3 whitespace-nowrap text-xs text-right text-green-700 font-medium'>
+                        {formatCurrency(record.incomes || 0)}
                       </td>
 
                       {/* Mobile: Solo Código-Nombre clickeable */}
@@ -175,9 +205,6 @@ export default function Balance8ColumnsPage() {
                           <div className='flex-1 min-w-0'>
                             <div className='text-sm font-medium text-gray-900'>
                               {record.accountCode} - {record.accountName}
-                            </div>
-                            <div className='text-xs text-gray-500 mt-1'>
-                              Balance: {formatCurrency(record.balance)}
                             </div>
                           </div>
                           <div className='ml-3 flex-shrink-0'>
@@ -191,34 +218,60 @@ export default function Balance8ColumnsPage() {
                       </td>
                     </tr>
 
-                    {/* Fila expandida (solo mobile) */}
+                    {/* Fila expandida (solo mobile) - TODAS las 10 COLUMNAS */}
                     {expandedRows.has(index) && (
                       <tr key={`expanded-${index}`} className='md:hidden bg-gray-50'>
-                        <td colSpan={6} className='px-4 py-4'>
-                          <div className='space-y-3 text-sm'>
+                        <td colSpan={11} className='px-4 py-4'>
+                          <div className='space-y-2 text-sm'>
                             <div className='flex justify-between items-center'>
                               <span className='text-gray-600 font-medium'>Código:</span>
                               <span className='text-gray-900 font-semibold'>{record.accountCode}</span>
                             </div>
                             <div className='flex justify-between items-center'>
+                              <span className='text-gray-600 font-medium'>Nombre:</span>
+                              <span className='text-gray-900 text-right text-xs'>{record.accountName}</span>
+                            </div>
+                            <div className='border-t border-gray-200 my-2'></div>
+                            <div className='flex justify-between items-center'>
                               <span className='text-gray-600 font-medium'>Debe:</span>
-                              <span className='text-gray-900'>{formatCurrency(record.debit)}</span>
+                              <span className='text-gray-900'>{formatCurrency(record.debit || 0)}</span>
                             </div>
                             <div className='flex justify-between items-center'>
                               <span className='text-gray-600 font-medium'>Haber:</span>
-                              <span className='text-gray-900'>{formatCurrency(record.credit)}</span>
+                              <span className='text-gray-900'>{formatCurrency(record.credit || 0)}</span>
                             </div>
-                            <div className='flex justify-between items-center border-t pt-3'>
-                              <span className='text-gray-900 font-bold'>Balance Total:</span>
-                              <span className='text-lg font-bold text-yellow-600'>
-                                {formatCurrency(record.balance)}
-                              </span>
+                            <div className='border-t-2 border-gray-300 my-3'></div>
+                            <div className='flex justify-between items-center'>
+                              <span className='text-blue-700 font-medium'>Balance Deudor:</span>
+                              <span className='text-blue-700 font-semibold'>{formatCurrency(record.debitBalance || 0)}</span>
+                            </div>
+                            <div className='flex justify-between items-center'>
+                              <span className='text-red-700 font-medium'>Balance Acreedor:</span>
+                              <span className='text-red-700 font-semibold'>{formatCurrency(record.creditBalance || 0)}</span>
+                            </div>
+                            <div className='border-t-2 border-gray-300 my-3'></div>
+                            <div className='text-xs font-semibold text-gray-500 uppercase mb-2'>Categorías</div>
+                            <div className='flex justify-between items-center'>
+                              <span className='text-blue-700 font-medium'>Activos:</span>
+                              <span className='text-blue-700 font-semibold'>{formatCurrency(record.assets || 0)}</span>
+                            </div>
+                            <div className='flex justify-between items-center'>
+                              <span className='text-red-700 font-medium'>Pasivos:</span>
+                              <span className='text-red-700 font-semibold'>{formatCurrency(record.liabilities || 0)}</span>
+                            </div>
+                            <div className='flex justify-between items-center'>
+                              <span className='text-orange-700 font-medium'>Gastos:</span>
+                              <span className='text-orange-700 font-semibold'>{formatCurrency(record.expenses || 0)}</span>
+                            </div>
+                            <div className='flex justify-between items-center'>
+                              <span className='text-green-700 font-medium'>Ingresos:</span>
+                              <span className='text-green-700 font-semibold'>{formatCurrency(record.incomes || 0)}</span>
                             </div>
                           </div>
                         </td>
                       </tr>
                     )}
-                  </>
+                  </Fragment>
                 ))}
               </tbody>
             </table>

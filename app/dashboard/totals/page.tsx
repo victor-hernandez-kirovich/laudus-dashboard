@@ -1,11 +1,11 @@
 ﻿'use client'
 
-import { useEffect, useState } from 'react'
+import { useEffect, useState, Fragment } from 'react'
 import { Header } from '@/components/layout/Header'
 import { Card } from '@/components/ui/Card'
 import { BalanceChart } from '@/components/charts/BalanceChart'
 import { DistributionChart } from '@/components/charts/DistributionChart'
-import { formatCurrency, formatDate } from '@/lib/utils'
+import { formatCurrency, formatDate, normalizeBalanceData } from '@/lib/utils'
 import { BalanceRecord } from '@/lib/types'
 import { ChevronDown, ChevronRight } from 'lucide-react'
 
@@ -89,38 +89,41 @@ export default function TotalsPage() {
         {/* Charts */}
         <div className='grid grid-cols-1 gap-4 sm:gap-6 xl:grid-cols-2'>
           <BalanceChart
-            data={data.data}
+            data={data.data.map(normalizeBalanceData)}
             title='Top 10 Cuentas'
             subtitle='Debe vs Haber'
           />
           <DistributionChart
-            data={data.data}
+            data={data.data.map(normalizeBalanceData)}
             title='Distribución de Balance'
             subtitle='Top 6 cuentas por balance'
           />
         </div>
 
-        {/* Data Table */}
+        {/* Data Table - 6 COLUMNAS (solo datos de DB) */}
         <Card title='Detalle de Cuentas' subtitle={'Total: ' + data.recordCount + ' registros'}>
           <div className='overflow-x-auto -mx-4 sm:mx-0'>
             <div className='inline-block min-w-full align-middle'>
               <table className='min-w-full divide-y divide-gray-200'>
                 <thead className='bg-gray-50'>
                   <tr>
-                    <th className='hidden md:table-cell px-3 sm:px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider'>
+                    <th className='hidden md:table-cell px-2 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider'>
                       Código
                     </th>
-                    <th className='hidden md:table-cell px-3 sm:px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider'>
+                    <th className='hidden md:table-cell px-2 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider'>
                       Nombre de Cuenta
                     </th>
-                    <th className='hidden md:table-cell px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider'>
+                    <th className='hidden md:table-cell px-2 py-2 text-right text-xs font-medium text-gray-500 uppercase tracking-wider'>
                       Debe
                     </th>
-                    <th className='hidden md:table-cell px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider'>
+                    <th className='hidden md:table-cell px-2 py-2 text-right text-xs font-medium text-gray-500 uppercase tracking-wider'>
                       Haber
                     </th>
-                    <th className='hidden md:table-cell px-3 sm:px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider'>
-                      Balance
+                    <th className='hidden md:table-cell px-2 py-2 text-right text-xs font-medium text-blue-600 uppercase tracking-wider'>
+                      Bal. Deudor
+                    </th>
+                    <th className='hidden md:table-cell px-2 py-2 text-right text-xs font-medium text-red-600 uppercase tracking-wider'>
+                      Bal. Acreedor
                     </th>
                     <th className='md:hidden px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider'>
                       Cuenta
@@ -128,25 +131,28 @@ export default function TotalsPage() {
                   </tr>
                 </thead>
                 <tbody className='bg-white divide-y divide-gray-200'>
-                  {data.data.map((row, index) => (
-                    <>
+                  {data.data.map(normalizeBalanceData).map((row, index) => (
+                    <Fragment key={index}>
                       {/* Fila principal */}
-                      <tr key={`row-${index}`} className='hover:bg-gray-50'>
-                        {/* Desktop: Todas las columnas */}
-                        <td className='hidden md:table-cell px-3 sm:px-6 py-4 whitespace-nowrap text-xs sm:text-sm font-medium text-gray-900'>
+                      <tr className='hover:bg-gray-50'>
+                        {/* Desktop: TODAS las 6 columnas (solo DB) */}
+                        <td className='hidden md:table-cell px-2 py-3 whitespace-nowrap text-xs font-medium text-gray-900'>
                           {row.accountCode}
                         </td>
-                        <td className='hidden md:table-cell px-3 sm:px-6 py-4 text-xs sm:text-sm text-gray-900'>
+                        <td className='hidden md:table-cell px-2 py-3 text-xs text-gray-900'>
                           {row.accountName}
                         </td>
-                        <td className='hidden md:table-cell px-6 py-4 whitespace-nowrap text-sm text-right text-gray-900'>
+                        <td className='hidden md:table-cell px-2 py-3 whitespace-nowrap text-xs text-right text-gray-900'>
                           {formatCurrency(row.debit || 0)}
                         </td>
-                        <td className='hidden md:table-cell px-6 py-4 whitespace-nowrap text-sm text-right text-gray-900'>
+                        <td className='hidden md:table-cell px-2 py-3 whitespace-nowrap text-xs text-right text-gray-900'>
                           {formatCurrency(row.credit || 0)}
                         </td>
-                        <td className='hidden md:table-cell px-3 sm:px-6 py-4 whitespace-nowrap text-xs sm:text-sm text-right font-medium text-gray-900'>
-                          {formatCurrency(row.balance || 0)}
+                        <td className='hidden md:table-cell px-2 py-3 whitespace-nowrap text-xs text-right text-blue-700 font-medium'>
+                          {formatCurrency(row.debitBalance || 0)}
+                        </td>
+                        <td className='hidden md:table-cell px-2 py-3 whitespace-nowrap text-xs text-right text-red-700 font-medium'>
+                          {formatCurrency(row.creditBalance || 0)}
                         </td>
 
                         {/* Mobile: Solo Código-Nombre clickeable */}
@@ -158,9 +164,6 @@ export default function TotalsPage() {
                             <div className='flex-1 min-w-0'>
                               <div className='text-sm font-medium text-gray-900'>
                                 {row.accountCode} - {row.accountName}
-                              </div>
-                              <div className='text-xs text-gray-500 mt-1'>
-                                Balance: {formatCurrency(row.balance || 0)}
                               </div>
                             </div>
                             <div className='ml-3 flex-shrink-0'>
@@ -174,15 +177,20 @@ export default function TotalsPage() {
                         </td>
                       </tr>
 
-                      {/* Fila expandida (solo mobile) */}
+                      {/* Fila expandida (solo mobile) - TODAS las 6 columnas */}
                       {expandedRows.has(index) && (
                         <tr key={`expanded-${index}`} className='md:hidden bg-gray-50'>
-                          <td colSpan={6} className='px-4 py-4'>
-                            <div className='space-y-3 text-sm'>
+                          <td colSpan={7} className='px-4 py-4'>
+                            <div className='space-y-2 text-sm'>
                               <div className='flex justify-between items-center'>
                                 <span className='text-gray-600 font-medium'>Código:</span>
                                 <span className='text-gray-900 font-semibold'>{row.accountCode}</span>
                               </div>
+                              <div className='flex justify-between items-center'>
+                                <span className='text-gray-600 font-medium'>Nombre:</span>
+                                <span className='text-gray-900 text-right'>{row.accountName}</span>
+                              </div>
+                              <div className='border-t border-gray-200 my-2'></div>
                               <div className='flex justify-between items-center'>
                                 <span className='text-gray-600 font-medium'>Debe:</span>
                                 <span className='text-gray-900'>{formatCurrency(row.debit || 0)}</span>
@@ -191,17 +199,20 @@ export default function TotalsPage() {
                                 <span className='text-gray-600 font-medium'>Haber:</span>
                                 <span className='text-gray-900'>{formatCurrency(row.credit || 0)}</span>
                               </div>
-                              <div className='flex justify-between items-center border-t pt-3'>
-                                <span className='text-gray-900 font-bold'>Balance Total:</span>
-                                <span className='text-lg font-bold text-blue-600'>
-                                  {formatCurrency(row.balance || 0)}
-                                </span>
+                              <div className='border-t-2 border-gray-300 my-3'></div>
+                              <div className='flex justify-between items-center'>
+                                <span className='text-blue-700 font-medium'>Balance Deudor:</span>
+                                <span className='text-blue-700 font-semibold'>{formatCurrency(row.debitBalance || 0)}</span>
+                              </div>
+                              <div className='flex justify-between items-center'>
+                                <span className='text-red-700 font-medium'>Balance Acreedor:</span>
+                                <span className='text-red-700 font-semibold'>{formatCurrency(row.creditBalance || 0)}</span>
                               </div>
                             </div>
                           </td>
                         </tr>
                       )}
-                    </>
+                    </Fragment>
                   ))}
                 </tbody>
               </table>

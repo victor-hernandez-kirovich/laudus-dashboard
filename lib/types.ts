@@ -8,11 +8,25 @@ export interface BalanceRecord {
 }
 
 export interface BalanceData {
-  accountCode?: string;
+  // Campos originales de Laudus
+  accountId?: number;
+  accountNumber?: string;
   accountName?: string;
   debit?: number;
   credit?: number;
   balance?: number;
+  debitBalance?: number;
+  creditBalance?: number;
+  
+  // Campos específicos de 8Columns
+  assets?: number;
+  liabilities?: number;
+  expenses?: number;
+  incomes?: number;
+  
+  // Campos normalizados (agregados por helper)
+  accountCode?: string;
+  
   level?: number;
   [key: string]: any;
 }

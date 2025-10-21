@@ -1,7 +1,7 @@
 'use client';
 
 import { PieChart, Pie, Cell, ResponsiveContainer, Legend, Tooltip } from 'recharts';
-import { formatCurrency } from '@/lib/utils';
+import { formatCurrency, normalizeBalanceData } from '@/lib/utils';
 import { Card } from '../ui/Card';
 
 const COLORS = ['#3b82f6', '#10b981', '#f59e0b', '#ef4444', '#8b5cf6', '#ec4899'];
@@ -30,16 +30,16 @@ export function DistributionChart({ data, title, subtitle }: DistributionChartPr
     );
   }
 
-  // Procesar y filtrar datos - soportar múltiples nombres de campo
+  // Procesar y filtrar datos - APLICAR NORMALIZACIÓN
   const chartData = data
+    .map(normalizeBalanceData)
     .slice(0, 6)
     .map((item, index) => {
       // Obtener el nombre de la cuenta
       const name = item.accountName || item.accountCode || item.name || `Cuenta ${index + 1}`;
       
-      // Obtener el valor - soportar múltiples nombres de campo
-      const rawValue = item.balance ?? item.amount ?? item.value ?? item.total ?? 0;
-      const value = Math.abs(Number(rawValue));
+      // Obtener el valor - ahora siempre tendrá balance gracias a normalizeBalanceData
+      const value = Math.abs(Number(item.balance ?? 0));
       
       return {
         name: name.length > 30 ? name.substring(0, 27) + '...' : name,

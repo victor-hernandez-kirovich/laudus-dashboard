@@ -1,11 +1,11 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, Fragment } from 'react'
 import { Header } from '@/components/layout/Header'
 import { Card } from '@/components/ui/Card'
 import { BalanceChart } from '@/components/charts/BalanceChart'
 import { DistributionChart } from '@/components/charts/DistributionChart'
-import { formatCurrency, formatDate } from '@/lib/utils'
+import { formatCurrency, formatDate, normalizeBalanceData } from '@/lib/utils'
 import { Activity, TrendingUp, Calendar, ChevronDown, ChevronRight } from 'lucide-react'
 
 export default function BalanceStandardPage() {
@@ -114,8 +114,8 @@ export default function BalanceStandardPage() {
 
         {/* Charts */}
         <div className='grid grid-cols-1 gap-6 lg:grid-cols-2'>
-          <BalanceChart data={records.slice(0, 10)} title='Top 10 Cuentas - Debe vs Haber' />
-          <DistributionChart data={records.slice(0, 6)} title='Distribución del Balance (Top 6)' />
+          <BalanceChart data={records.map(normalizeBalanceData).slice(0, 10)} title='Top 10 Cuentas - Debe vs Haber' />
+          <DistributionChart data={records.map(normalizeBalanceData).slice(0, 6)} title='Distribución del Balance (Top 6)' />
         </div>
 
         {/* Data Table */}
@@ -145,10 +145,10 @@ export default function BalanceStandardPage() {
                 </tr>
               </thead>
               <tbody className='bg-white divide-y divide-gray-200'>
-                {records.map((record: any, index: number) => (
-                  <>
+                {records.map(normalizeBalanceData).map((record: any, index: number) => (
+                  <Fragment key={index}>
                     {/* Fila principal */}
-                    <tr key={`row-${index}`} className='hover:bg-gray-50'>
+                    <tr className='hover:bg-gray-50'>
                       {/* Desktop: Todas las columnas */}
                       <td className='hidden md:table-cell px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900'>
                         {record.accountCode}
@@ -218,7 +218,7 @@ export default function BalanceStandardPage() {
                         </td>
                       </tr>
                     )}
-                  </>
+                  </Fragment>
                 ))}
               </tbody>
             </table>

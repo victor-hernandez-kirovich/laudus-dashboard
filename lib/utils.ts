@@ -22,3 +22,29 @@ export function formatNumber(num: number): string {
 export function cn(...classes: (string | undefined | null | false)[]): string {
   return classes.filter(Boolean).join(' ');
 }
+
+/**
+ * Normaliza los datos de balance de Laudus API a formato consistente
+ * Maneja las diferencias entre totals, standard y 8Columns
+ */
+export function normalizeBalanceData(item: any): any {
+  if (!item) return item;
+  
+  // Calcular balance si no existe
+  const balance = item.balance ?? (
+    (item.debitBalance ?? 0) - (item.creditBalance ?? 0)
+  );
+  
+  // El accountCode siempre viene como accountNumber de Laudus
+  const accountCode = item.accountNumber || item.accountCode || '';
+  
+  return {
+    ...item, // Mantener todos los campos originales
+    // Campos normalizados (sobrescriben los originales)
+    accountCode,
+    accountName: item.accountName || '',
+    debit: item.debit ?? 0,
+    credit: item.credit ?? 0,
+    balance,
+  };
+}

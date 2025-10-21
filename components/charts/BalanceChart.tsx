@@ -1,7 +1,7 @@
 'use client';
 
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts';
-import { formatCurrency } from '@/lib/utils';
+import { formatCurrency, normalizeBalanceData } from '@/lib/utils';
 import { Card } from '../ui/Card';
 
 interface BalanceChartProps {
@@ -11,13 +11,16 @@ interface BalanceChartProps {
 }
 
 export function BalanceChart({ data, title, subtitle }: BalanceChartProps) {
-  // Transform data for chart
-  const chartData = data.slice(0, 10).map(item => ({
-    name: item.accountName || item.accountCode || 'N/A',
-    balance: Math.abs(item.balance || 0),
-    debit: item.debit || 0,
-    credit: item.credit || 0,
-  }));
+  // Normalizar datos y transformar para el gráfico
+  const chartData = data
+    .map(normalizeBalanceData)
+    .slice(0, 10)
+    .map(item => ({
+      name: item.accountName || item.accountCode || 'N/A',
+      balance: Math.abs(item.balance || 0),
+      debit: item.debit || 0,
+      credit: item.credit || 0,
+    }));
 
   return (
     <Card title={title} subtitle={subtitle}>
