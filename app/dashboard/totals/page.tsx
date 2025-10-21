@@ -52,15 +52,15 @@ export default function TotalsPage() {
   }
 
   return (
-    <div>
-      <Header 
-        title='Balance Totals' 
+    <div className="min-h-screen">
+      <Header
+        title='Balance Totals'
         subtitle={'Fecha: ' + formatDate(data.date)}
       />
-      
-      <div className='p-8 space-y-8'>
+
+      <div className='p-4 sm:p-6 lg:p-8 space-y-6 sm:space-y-8'>
         {/* Summary Cards */}
-        <div className='grid grid-cols-1 gap-6 md:grid-cols-3'>
+        <div className='grid grid-cols-1 gap-4 sm:gap-6 sm:grid-cols-2 lg:grid-cols-3'>
           <Card title='Total Registros'>
             <p className='text-3xl font-bold text-gray-900'>{data.recordCount}</p>
           </Card>
@@ -75,7 +75,7 @@ export default function TotalsPage() {
         </div>
 
         {/* Charts */}
-        <div className='grid grid-cols-1 gap-6 lg:grid-cols-2'>
+        <div className='grid grid-cols-1 gap-4 sm:gap-6 xl:grid-cols-2'>
           <BalanceChart
             data={data.data}
             title='Top 10 Cuentas'
@@ -90,49 +90,53 @@ export default function TotalsPage() {
 
         {/* Data Table */}
         <Card title='Detalle de Cuentas' subtitle={'Total: ' + data.recordCount + ' registros'}>
-          <div className='overflow-x-auto'>
-            <table className='min-w-full divide-y divide-gray-200'>
-              <thead className='bg-gray-50'>
-                <tr>
-                  <th className='px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider'>
-                    Código
-                  </th>
-                  <th className='px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider'>
-                    Nombre de Cuenta
-                  </th>
-                  <th className='px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider'>
-                    Debe
-                  </th>
-                  <th className='px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider'>
-                    Haber
-                  </th>
-                  <th className='px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider'>
-                    Balance
-                  </th>
-                </tr>
-              </thead>
-              <tbody className='bg-white divide-y divide-gray-200'>
-                {data.data.slice(0, 20).map((row, index) => (
-                  <tr key={index} className='hover:bg-gray-50'>
-                    <td className='px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900'>
-                      {row.accountCode}
-                    </td>
-                    <td className='px-6 py-4 text-sm text-gray-900'>
-                      {row.accountName}
-                    </td>
-                    <td className='px-6 py-4 whitespace-nowrap text-sm text-right text-gray-900'>
-                      {formatCurrency(row.debit || 0)}
-                    </td>
-                    <td className='px-6 py-4 whitespace-nowrap text-sm text-right text-gray-900'>
-                      {formatCurrency(row.credit || 0)}
-                    </td>
-                    <td className='px-6 py-4 whitespace-nowrap text-sm text-right font-medium text-gray-900'>
-                      {formatCurrency(row.balance || 0)}
-                    </td>
+          <div className='overflow-x-auto -mx-4 sm:mx-0'>
+            <div className='inline-block min-w-full align-middle'>
+              <table className='min-w-full divide-y divide-gray-200'>
+                <thead className='bg-gray-50'>
+                  <tr>
+                    <th className='px-3 sm:px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider'>
+                      Código
+                    </th>
+                    <th className='px-3 sm:px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider'>
+                      Nombre de Cuenta
+                    </th>
+                    <th className='hidden sm:table-cell px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider'>
+                      Debe
+                    </th>
+                    <th className='hidden sm:table-cell px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider'>
+                      Haber
+                    </th>
+                    <th className='px-3 sm:px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider'>
+                      Balance
+                    </th>
                   </tr>
-                ))}
-              </tbody>
-            </table>
+                </thead>
+                <tbody className='bg-white divide-y divide-gray-200'>
+                  {data.data.slice(0, 20).map((row, index) => (
+                    <tr key={index} className='hover:bg-gray-50'>
+                      <td className='px-3 sm:px-6 py-4 whitespace-nowrap text-xs sm:text-sm font-medium text-gray-900'>
+                        {row.accountCode}
+                      </td>
+                      <td className='px-3 sm:px-6 py-4 text-xs sm:text-sm text-gray-900'>
+                        <div className='max-w-xs sm:max-w-none truncate sm:whitespace-normal'>
+                          {row.accountName}
+                        </div>
+                      </td>
+                      <td className='hidden sm:table-cell px-6 py-4 whitespace-nowrap text-sm text-right text-gray-900'>
+                        {formatCurrency(row.debit || 0)}
+                      </td>
+                      <td className='hidden sm:table-cell px-6 py-4 whitespace-nowrap text-sm text-right text-gray-900'>
+                        {formatCurrency(row.credit || 0)}
+                      </td>
+                      <td className='px-3 sm:px-6 py-4 whitespace-nowrap text-xs sm:text-sm text-right font-medium text-gray-900'>
+                        {formatCurrency(row.balance || 0)}
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
           </div>
           {data.recordCount > 20 && (
             <div className='mt-4 text-center text-sm text-gray-600'>

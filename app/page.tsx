@@ -42,15 +42,15 @@ export default async function HomePage() {
   const health = await getHealthStatus()
 
   return (
-    <div>
-      <Header 
-        title='Dashboard' 
+    <div className="min-h-screen">
+      <Header
+        title='Dashboard'
         subtitle='Resumen general de Balance Sheet'
       />
-      
-      <div className='p-8 space-y-8'>
+
+      <div className='p-4 sm:p-6 lg:p-8 space-y-6 sm:space-y-8'>
         {/* Stats Grid */}
-        <div className='grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-4'>
+        <div className='grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4 sm:gap-6'>
           <StatCard
             title='Balance Totals'
             value={health?.collections?.balance_totals?.recordCount || 0}
@@ -78,9 +78,9 @@ export default async function HomePage() {
         </div>
 
         {/* Quick Links */}
-        <div className='grid grid-cols-1 gap-6 md:grid-cols-3'>
+        <div className='grid grid-cols-1 gap-4 sm:gap-6 md:grid-cols-2 lg:grid-cols-3'>
           <Link href='/dashboard/totals' className='block group'>
-            <Card className='group-hover:shadow-md transition-shadow cursor-pointer'>
+            <Card className='group-hover:shadow-lg group-hover:scale-[1.02] transition-all duration-200 cursor-pointer'>
               <div className='flex items-center justify-between'>
                 <div>
                   <h3 className='font-semibold text-gray-900'>Balance Totals</h3>
@@ -94,7 +94,7 @@ export default async function HomePage() {
           </Link>
 
           <Link href='/dashboard/standard' className='block group'>
-            <Card className='group-hover:shadow-md transition-shadow cursor-pointer'>
+            <Card className='group-hover:shadow-lg group-hover:scale-[1.02] transition-all duration-200 cursor-pointer'>
               <div className='flex items-center justify-between'>
                 <div>
                   <h3 className='font-semibold text-gray-900'>Balance Standard</h3>
@@ -108,7 +108,7 @@ export default async function HomePage() {
           </Link>
 
           <Link href='/dashboard/8columns' className='block group'>
-            <Card className='group-hover:shadow-md transition-shadow cursor-pointer'>
+            <Card className='group-hover:shadow-lg group-hover:scale-[1.02] transition-all duration-200 cursor-pointer'>
               <div className='flex items-center justify-between'>
                 <div>
                   <h3 className='font-semibold text-gray-900'>Balance 8 Columns</h3>
