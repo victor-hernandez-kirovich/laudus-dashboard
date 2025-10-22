@@ -9,7 +9,8 @@ import { formatCurrency, formatDate, normalizeBalanceData } from '@/lib/utils'
 import { Activity, TrendingUp, Calendar, ChevronDown, ChevronRight } from 'lucide-react'
 
 export default function Balance8ColumnsPage() {
-  const [data, setData] = useState<any>(null)
+  const [allData, setAllData] = useState<any[]>([])
+  const [selectedIndex, setSelectedIndex] = useState(0)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
   const [expandedRows, setExpandedRows] = useState<Set<number>>(new Set())
@@ -24,13 +25,25 @@ export default function Balance8ColumnsPage() {
     setExpandedRows(newExpanded)
   }
 
+  const formatSpanishDate = (dateString: string): string => {
+    const date = new Date(dateString)
+    const months = [
+      'Ene', 'Feb', 'Mar', 'Abr', 'May', 'Jun',
+      'Jul', 'Ago', 'Sep', 'Oct', 'Nov', 'Dic'
+    ]
+    const day = date.getDate()
+    const month = months[date.getMonth()]
+    const year = date.getFullYear()
+    return `${day} ${month} ${year}`
+  }
+
   useEffect(() => {
     async function fetchData() {
       try {
         const res = await fetch('/api/data/8columns')
         if (!res.ok) throw new Error('Error al cargar datos')
         const result = await res.json()
-        setData(result.data)
+        setAllData(result.data)
       } catch (err) {
         setError(err instanceof Error ? err.message : 'Error desconocido')
       } finally {
@@ -64,17 +77,58 @@ export default function Balance8ColumnsPage() {
     )
   }
 
-  const latestRecord = data?.[0]
+  if (!allData || allData.length === 0) {
+    return (
+      <div>
+        <Header title='Balance 8 Columns' subtitle='No hay datos disponibles' />
+        <div className='p-8 flex items-center justify-center'>
+          <div className='text-gray-500'>No se encontraron datos</div>
+        </div>
+      </div>
+    )
+  }
+
+  const latestRecord = allData[selectedIndex]
   const records = latestRecord?.data || []
 
   return (
     <div>
-      <Header 
-        title='Balance 8 Columns' 
+      <Header
+        title='Balance 8 Columns'
         subtitle='Análisis detallado con 8 columnas de datos'
       />
-      
+
       <div className='p-8 space-y-8'>
+        {/* Selector de Fechas */}
+        <Card>
+          <div className='flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 overflow-hidden'>
+            <div className='flex items-center gap-2 flex-shrink-0'>
+              <Calendar className='h-5 w-5 text-blue-600' />
+              <label className='text-sm font-medium text-gray-700'>
+                <span className='sm:hidden'>Fecha:</span>
+                <span className='hidden sm:inline'>Seleccionar Fecha del Balance:</span>
+              </label>
+            </div>
+            <select
+              value={selectedIndex}
+              onChange={(e) => setSelectedIndex(Number(e.target.value))}
+              className='w-full sm:w-auto px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-white text-gray-900 text-sm font-medium shadow-sm hover:border-gray-400 transition-colors max-w-full'
+              style={{ maxWidth: '100%' }}
+            >
+              {allData.map((record, idx) => (
+                <option key={idx} value={idx}>
+                  {formatSpanishDate(record.date)}
+                </option>
+              ))}
+            </select>
+          </div>
+          {allData.length > 1 && (
+            <div className='mt-2 text-xs text-gray-500'>
+              {allData.length} fechas disponibles en el histórico
+            </div>
+          )}
+        </Card>
+
         {/* Summary Cards */}
         <div className='grid grid-cols-1 gap-6 md:grid-cols-3'>
           <Card>
