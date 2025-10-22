@@ -3,6 +3,8 @@
  * TypeScript client for interacting with Laudus ERP API
  */
 
+import axios, { AxiosInstance } from 'axios'
+
 export interface LaudusConfig {
   apiUrl: string
   username: string
@@ -38,10 +40,21 @@ export class LaudusAPIClient {
   private baseUrl: string
   private token: string | null = null
   private config: LaudusConfig
+  private axiosInstance: AxiosInstance
 
   constructor(config: LaudusConfig) {
     this.baseUrl = config.apiUrl
     this.config = config
+    
+    // Create axios instance similar to Python's requests.Session()
+    this.axiosInstance = axios.create({
+      baseURL: config.apiUrl,
+      timeout: 900000,  // 15 minutes (same as Python: 900 seconds)
+      headers: {
+        'Content-Type': 'application/json',
+        'Accept': 'application/json'
+      }
+    })
   }
 
   /**
@@ -49,25 +62,19 @@ export class LaudusAPIClient {
    */
   async authenticate(): Promise<boolean> {
     try {
-      const response = await fetch(`${this.baseUrl}/security/login`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Accept': 'application/json'
-        },
-        body: JSON.stringify({
-          userName: this.config.username,
-          password: this.config.password,
-          companyVATId: this.config.companyVat
-        })
+      const response = await this.axiosInstance.post('/security/login', {
+        userName: this.config.username,
+        password: this.config.password,
+        companyVATId: this.config.companyVat
       })
-
-      if (!response.ok) {
-        throw new Error(`Authentication failed: ${response.statusText}`)
+      
+      // Parse JSON response to extract token
+      this.token = response.data.token
+      
+      if (this.token) {
+        // Update axios instance headers with token (like Python's session.headers.update)
+        this.axiosInstance.defaults.headers.common['Authorization'] = `Bearer ${this.token}`
       }
-
-      const tokenText = await response.text()
-      this.token = tokenText.replace(/^"(.*)"$/, '$1') // Remove quotes
 
       return true
     } catch (error) {
@@ -80,36 +87,30 @@ export class LaudusAPIClient {
    * Fetch balance sheet data from specified endpoint
    */
   async fetchBalanceSheet(endpoint: LaudusEndpoint, dateTo: string): Promise<any[] | null> {
+    if (!this.token) {
+      throw new Error('Not authenticated. Call authenticate() first.')
+    }
+    
     try {
-      if (!this.token) {
-        throw new Error('Not authenticated. Call authenticate() first.')
-      }
-
-      const params = new URLSearchParams({
-        dateTo: dateTo,
-        showAccountsWithZeroBalance: 'true',
-        showOnlyAccountsWithActivity: 'false'
-      })
-
-      const url = `${this.baseUrl}${endpoint.path}?${params}`
-
-      const response = await fetch(url, {
-        method: 'GET',
-        headers: {
-          'Authorization': `Bearer ${this.token}`,
-          'Content-Type': 'application/json',
-          'Accept': 'application/json'
+      const response = await this.axiosInstance.get(endpoint.path, {
+        params: {
+          dateTo: dateTo,
+          showAccountsWithZeroBalance: 'true',
+          showOnlyAccountsWithActivity: 'false'
         }
       })
 
-      if (!response.ok) {
-        throw new Error(`Failed to fetch ${endpoint.name}: ${response.statusText}`)
-      }
-
-      const data = await response.json()
-      return data
+      return response.data
     } catch (error) {
-      console.error(`Error fetching ${endpoint.name}:`, error)
+      if (axios.isAxiosError(error)) {
+        if (error.code === 'ECONNABORTED') {
+          console.error(`Timeout fetching ${endpoint.name} (>15 minutes)`)
+        } else {
+          console.error(`Error fetching ${endpoint.name}:`, error.message)
+        }
+      } else {
+        console.error(`Error fetching ${endpoint.name}:`, error)
+      }
       return null
     }
   }
@@ -121,3 +122,6 @@ export class LaudusAPIClient {
     return this.token
   }
 }
+
+
+
