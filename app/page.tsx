@@ -120,6 +120,20 @@ export default async function HomePage() {
               </div>
             </Card>
           </Link>
+
+          <Link href='/dashboard/indicadores-financieros' className='block group'>
+            <Card className='group-hover:shadow-lg group-hover:scale-[1.02] transition-all duration-200 cursor-pointer'>
+              <div className='flex items-center justify-between'>
+                <div>
+                  <h3 className='font-semibold text-gray-900'>Indicadores Financieros</h3>
+                  <p className='mt-2 text-sm text-gray-600'>
+                    Ratios e indicadores de liquidez
+                  </p>
+                </div>
+                <TrendingUp className='h-8 w-8 text-purple-500' />
+              </div>
+            </Card>
+          </Link>
         </div>
 
         {/* Recent Activity */}
