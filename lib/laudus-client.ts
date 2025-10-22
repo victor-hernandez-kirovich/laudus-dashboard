@@ -78,7 +78,16 @@ export class LaudusAPIClient {
 
       return true
     } catch (error) {
-      console.error('Authentication error:', error)
+      if (axios.isAxiosError(error)) {
+        console.error('Authentication error:', {
+          status: error.response?.status,
+          statusText: error.response?.statusText,
+          data: error.response?.data,
+          message: error.message
+        })
+      } else {
+        console.error('Authentication error:', error)
+      }
       return false
     }
   }

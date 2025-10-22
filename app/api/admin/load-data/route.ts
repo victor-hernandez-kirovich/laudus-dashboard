@@ -1,14 +1,9 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { getDatabase } from '@/lib/mongodb'
-import { LaudusAPIClient, LAUDUS_ENDPOINTS } from '@/lib/laudus-client'
+import { exec } from 'child_process'
+import { promisify } from 'util'
+import path from 'path'
 
-// Configuración de Laudus desde variables de entorno
-const LAUDUS_CONFIG = {
-  apiUrl: process.env.LAUDUS_API_URL || 'https://api.laudus.cl',
-  username: process.env.LAUDUS_USERNAME || 'API',
-  password: process.env.LAUDUS_PASSWORD || '',
-  companyVat: process.env.LAUDUS_COMPANY_VAT || ''
-}
+const execPromise = promisify(exec)
 
 interface LoadDataRequest {
   date: string
@@ -28,14 +23,15 @@ interface LoadDataResponse {
 
 export async function POST(request: NextRequest) {
   try {
-    // Validar configuración
-    if (!LAUDUS_CONFIG.password || !LAUDUS_CONFIG.companyVat) {
+    // Check if running in production (Vercel)
+    if (process.env.VERCEL) {
       return NextResponse.json(
-        { 
-          success: false, 
-          error: 'Missing Laudus API credentials in environment variables' 
+        {
+          success: false,
+          error: 'Admin data loading is only available in local development',
+          message: 'Use the automated GitHub Actions workflow for production data loading'
         },
-        { status: 500 }
+        { status: 403 }
       )
     }
 
@@ -55,7 +51,7 @@ export async function POST(request: NextRequest) {
     const targetDate = new Date(date)
     const today = new Date()
     today.setHours(0, 0, 0, 0)
-    
+
     if (targetDate > today) {
       return NextResponse.json(
         { success: false, error: 'Cannot load data from future dates' },
@@ -71,101 +67,89 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    // Filtrar solo endpoints válidos
-    const validEndpoints = LAUDUS_ENDPOINTS.filter(e => endpoints.includes(e.name))
-    
-    if (validEndpoints.length === 0) {
+    // Map endpoint names to Python script format
+    const endpointMap: { [key: string]: string } = {
+      'totals': 'totals',
+      'standard': 'standard',
+      '8Columns': '8columns'
+    }
+
+    const pythonEndpoints = endpoints
+      .map(ep => endpointMap[ep])
+      .filter(Boolean)
+
+    if (pythonEndpoints.length === 0) {
       return NextResponse.json(
         { success: false, error: 'No valid endpoints specified' },
         { status: 400 }
       )
     }
 
-    // Inicializar cliente de Laudus
-    const laudusClient = new LaudusAPIClient(LAUDUS_CONFIG)
+    // Path to Python script (adjust based on your deployment)
+    const scriptPath = path.join(process.cwd(), '..', 'laudus-api', 'scripts', 'fetch_balancesheet_manual.py')
     
-    // Autenticar
-    const authenticated = await laudusClient.authenticate()
-    if (!authenticated) {
-      return NextResponse.json(
-        { success: false, error: 'Failed to authenticate with Laudus API' },
-        { status: 401 }
-      )
+    // Construct Python command
+    const pythonCmd = `python "${scriptPath}" --date ${date} --endpoints ${pythonEndpoints.join(' ')}`
+
+    console.log(`[DEBUG] Executing: ${pythonCmd}`)
+
+    // Execute Python script
+    const { stdout, stderr } = await execPromise(pythonCmd, {
+      env: {
+        ...process.env,
+        LAUDUS_API_URL: process.env.LAUDUS_API_URL || 'https://api.laudus.cl',
+        LAUDUS_USERNAME: process.env.LAUDUS_USERNAME || 'API',
+        LAUDUS_PASSWORD: process.env.LAUDUS_PASSWORD || '',
+        LAUDUS_COMPANY_VAT: process.env.LAUDUS_COMPANY_VAT || '',
+        MONGODB_URI: process.env.MONGODB_URI || '',
+        MONGODB_DATABASE: process.env.MONGODB_DATABASE || 'laudus_data'
+      },
+      timeout: 900000 // 15 minutes
+    })
+
+    console.log('[DEBUG] Python stdout:', stdout)
+    if (stderr) {
+      console.log('[DEBUG] Python stderr:', stderr)
     }
 
-    // Conectar a MongoDB
-    const db = await getDatabase()
-
-    // Resultados
-    const results: LoadDataResponse['results'] = []
-
-    // Procesar cada endpoint
-    for (const endpoint of validEndpoints) {
-      try {
-        // Fetch datos de Laudus
-        const data = await laudusClient.fetchBalanceSheet(endpoint, date)
-
-        if (!data) {
-          results.push({
-            endpoint: endpoint.name,
-            success: false,
-            error: 'Failed to fetch data from Laudus API'
-          })
-          continue
-        }
-
-        // Guardar en MongoDB
-        const collection = db.collection(endpoint.collection)
-        
-        const document = {
-          _id: `${date}-${endpoint.name}`,
-          date: date,
-          endpointType: endpoint.name,
-          recordCount: data.length,
-          insertedAt: new Date(),
-          data: data
-        }
-
-        // Upsert (reemplazar si existe, insertar si no)
-        await collection.replaceOne(
-          { _id: document._id } as any,
-          document,
-          { upsert: true }
-        )
-
-        results.push({
-          endpoint: endpoint.name,
-          success: true,
-          records: data.length
-        })
-
-      } catch (error) {
-        results.push({
-          endpoint: endpoint.name,
-          success: false,
-          error: error instanceof Error ? error.message : 'Unknown error'
-        })
-      }
+    // Parse JSON result from Python script
+    const jsonMatch = stdout.match(/__RESULT_JSON__[\s\S]*?\n(.+)/)
+    if (!jsonMatch) {
+      throw new Error('Failed to parse Python script output')
     }
 
-    // Verificar si todos fueron exitosos
-    const allSuccess = results.every(r => r.success)
-    const successCount = results.filter(r => r.success).length
+    const result = JSON.parse(jsonMatch[1])
+
+    // Map results back to original endpoint names
+    const reverseMap: { [key: string]: string } = {
+      'totals': 'totals',
+      'standard': 'standard',
+      '8Columns': '8Columns'
+    }
+
+    const mappedResults = result.results.map((r: any) => ({
+      ...r,
+      endpoint: reverseMap[r.endpoint] || r.endpoint
+    }))
+
+    const successCount = mappedResults.filter((r: any) => r.success).length
+    const totalCount = mappedResults.length
 
     return NextResponse.json({
-      success: allSuccess,
-      results,
-      message: allSuccess 
-        ? `Successfully loaded ${successCount}/${validEndpoints.length} endpoints`
-        : `Loaded ${successCount}/${validEndpoints.length} endpoints with errors`
+      success: result.success,
+      results: mappedResults,
+      message: result.success
+        ? `Successfully loaded ${successCount}/${totalCount} endpoints`
+        : `Loaded ${successCount}/${totalCount} endpoints with errors`
     })
 
   } catch (error: any) {
     console.error('Error in load-data API:', error)
     return NextResponse.json(
-      { 
-        success: false, 
-        error: error.message || 'Internal server error' 
+      {
+        success: false,
+        error: error.message || 'Internal server error',
+        details: error.stderr || ''
       },
       { status: 500 }
     )
