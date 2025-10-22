@@ -1,9 +1,4 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { exec } from 'child_process'
-import { promisify } from 'util'
-import path from 'path'
-
-const execPromise = promisify(exec)
 
 interface LoadDataRequest {
   date: string
@@ -23,18 +18,6 @@ interface LoadDataResponse {
 
 export async function POST(request: NextRequest) {
   try {
-    // Check if running in production (Vercel)
-    if (process.env.VERCEL) {
-      return NextResponse.json(
-        {
-          success: false,
-          error: 'Admin data loading is only available in local development',
-          message: 'Use the automated GitHub Actions workflow for production data loading'
-        },
-        { status: 403 }
-      )
-    }
-
     // Parse request body
     const body: LoadDataRequest = await request.json()
     const { date, endpoints } = body
@@ -67,80 +50,77 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    // Map endpoint names to Python script format
+    // Validar que tenemos el token de GitHub
+    const githubToken = process.env.GITHUB_TOKEN
+    if (!githubToken) {
+      return NextResponse.json(
+        {
+          success: false,
+          error: 'GitHub token not configured',
+          message: 'Please add GITHUB_TOKEN to environment variables'
+        },
+        { status: 500 }
+      )
+    }
+
+    // Map endpoint names to GitHub Actions format
     const endpointMap: { [key: string]: string } = {
       'totals': 'totals',
       'standard': 'standard',
       '8Columns': '8columns'
     }
 
-    const pythonEndpoints = endpoints
+    const githubEndpoints = endpoints
       .map(ep => endpointMap[ep])
       .filter(Boolean)
+      .join(',')
 
-    if (pythonEndpoints.length === 0) {
+    if (!githubEndpoints) {
       return NextResponse.json(
         { success: false, error: 'No valid endpoints specified' },
         { status: 400 }
       )
     }
 
-    // Path to Python script (adjust based on your deployment)
-    const scriptPath = path.join(process.cwd(), '..', 'laudus-api', 'scripts', 'fetch_balancesheet_manual.py')
-    
-    // Construct Python command
-    const pythonCmd = `python "${scriptPath}" --date ${date} --endpoints ${pythonEndpoints.join(' ')}`
+    console.log(`[DEBUG] Triggering GitHub Actions workflow with date=${date} and endpoints=${githubEndpoints}`)
 
-    console.log(`[DEBUG] Executing: ${pythonCmd}`)
+    // Disparar GitHub Actions workflow
+    const workflowResponse = await fetch(
+      'https://api.github.com/repos/victor-hernandez-kirovich/laudus-api/actions/workflows/laudus-manual.yml/dispatches',
+      {
+        method: 'POST',
+        headers: {
+          'Accept': 'application/vnd.github+json',
+          'Authorization': `Bearer ${githubToken}`,
+          'X-GitHub-Api-Version': '2022-11-28',
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({
+          ref: 'main',
+          inputs: {
+            date: date,
+            endpoints: githubEndpoints
+          }
+        })
+      }
+    )
 
-    // Execute Python script
-    const { stdout, stderr } = await execPromise(pythonCmd, {
-      env: {
-        ...process.env,
-        LAUDUS_API_URL: process.env.LAUDUS_API_URL || 'https://api.laudus.cl',
-        LAUDUS_USERNAME: process.env.LAUDUS_USERNAME || 'API',
-        LAUDUS_PASSWORD: process.env.LAUDUS_PASSWORD || '',
-        LAUDUS_COMPANY_VAT: process.env.LAUDUS_COMPANY_VAT || '',
-        MONGODB_URI: process.env.MONGODB_URI || '',
-        MONGODB_DATABASE: process.env.MONGODB_DATABASE || 'laudus_data'
-      },
-      timeout: 900000 // 15 minutes
-    })
-
-    console.log('[DEBUG] Python stdout:', stdout)
-    if (stderr) {
-      console.log('[DEBUG] Python stderr:', stderr)
+    if (!workflowResponse.ok) {
+      const errorText = await workflowResponse.text()
+      console.error('[DEBUG] GitHub API error:', errorText)
+      throw new Error(`Failed to trigger GitHub Actions: ${workflowResponse.status} ${errorText}`)
     }
 
-    // Parse JSON result from Python script
-    const jsonMatch = stdout.match(/__RESULT_JSON__[\s\S]*?\n(.+)/)
-    if (!jsonMatch) {
-      throw new Error('Failed to parse Python script output')
-    }
-
-    const result = JSON.parse(jsonMatch[1])
-
-    // Map results back to original endpoint names
-    const reverseMap: { [key: string]: string } = {
-      'totals': 'totals',
-      'standard': 'standard',
-      '8Columns': '8Columns'
-    }
-
-    const mappedResults = result.results.map((r: any) => ({
-      ...r,
-      endpoint: reverseMap[r.endpoint] || r.endpoint
-    }))
-
-    const successCount = mappedResults.filter((r: any) => r.success).length
-    const totalCount = mappedResults.length
+    console.log('[DEBUG] GitHub Actions workflow triggered successfully')
 
     return NextResponse.json({
-      success: result.success,
-      results: mappedResults,
-      message: result.success
-        ? `Successfully loaded ${successCount}/${totalCount} endpoints`
-        : `Loaded ${successCount}/${totalCount} endpoints with errors`
+      success: true,
+      message: 'GitHub Actions workflow triggered successfully',
+      details: {
+        date,
+        endpoints,
+        note: 'Check GitHub Actions for progress and results'
+      }
     })
 
   } catch (error: any) {
@@ -148,8 +128,7 @@ export async function POST(request: NextRequest) {
     return NextResponse.json(
       {
         success: false,
-        error: error.message || 'Internal server error',
-        details: error.stderr || ''
+        error: error.message || 'Internal server error'
       },
       { status: 500 }
     )
