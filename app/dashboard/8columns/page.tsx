@@ -3,8 +3,7 @@
 import { useState, useEffect, Fragment } from 'react'
 import { Header } from '@/components/layout/Header'
 import { Card } from '@/components/ui/Card'
-import { BalanceChart } from '@/components/charts/BalanceChart'
-import { DistributionChart } from '@/components/charts/DistributionChart'
+// Charts removed per request
 import { formatCurrency, formatDate, normalizeBalanceData } from '@/lib/utils'
 import { Activity, TrendingUp, Calendar, ChevronDown, ChevronRight } from 'lucide-react'
 
@@ -26,15 +25,13 @@ export default function Balance8ColumnsPage() {
   }
 
   const formatSpanishDate = (dateString: string): string => {
-    const date = new Date(dateString)
+    // Evitar problemas de zona horaria parseando manualmente
+    const [year, month, day] = dateString.split('-')
     const months = [
       'Ene', 'Feb', 'Mar', 'Abr', 'May', 'Jun',
       'Jul', 'Ago', 'Sep', 'Oct', 'Nov', 'Dic'
     ]
-    const day = date.getDate()
-    const month = months[date.getMonth()]
-    const year = date.getFullYear()
-    return `${day} ${month} ${year}`
+    return `${parseInt(day)} ${months[parseInt(month) - 1]} ${year}`
   }
 
   useEffect(() => {
@@ -146,7 +143,7 @@ export default function Balance8ColumnsPage() {
               <div>
                 <p className='text-sm font-medium text-gray-600'>Fecha de Datos</p>
                 <p className='text-2xl font-bold text-gray-900 mt-1'>
-                  {latestRecord?.date ? formatDate(new Date(latestRecord.date)) : 'N/A'}
+                  {latestRecord?.date ? latestRecord.date.split('-').reverse().join('/') : 'N/A'}
                 </p>
               </div>
               <Calendar className='h-8 w-8 text-blue-500' />
@@ -158,7 +155,7 @@ export default function Balance8ColumnsPage() {
               <div>
                 <p className='text-sm font-medium text-gray-600'>Última Actualización</p>
                 <p className='text-lg font-bold text-gray-900 mt-1'>
-                  {latestRecord?.timestamp ? new Date(latestRecord.timestamp).toLocaleString('es-CL') : 'N/A'}
+                  {latestRecord?.insertedAt ? new Date(latestRecord.insertedAt).toLocaleTimeString('es-CL', { hour: '2-digit', minute: '2-digit' }) : 'N/A'}
                 </p>
               </div>
               <TrendingUp className='h-8 w-8 text-purple-500' />
@@ -166,11 +163,7 @@ export default function Balance8ColumnsPage() {
           </Card>
         </div>
 
-        {/* Charts */}
-        <div className='grid grid-cols-1 gap-6 lg:grid-cols-2'>
-          <BalanceChart data={records.map(normalizeBalanceData).slice(0, 10)} title='Top 10 Cuentas - Debe vs Haber' />
-          <DistributionChart data={records.map(normalizeBalanceData).slice(0, 6)} title='Distribución del Balance (Top 6)' />
-        </div>
+        {/* Charts removed as requested */}
 
         {/* Data Table - 10 COLUMNAS TOTALES (solo datos de DB) */}
         <Card title='Datos del Balance 8 Columns' subtitle={`Total: ${records.length} registros`}>

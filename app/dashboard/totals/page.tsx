@@ -3,8 +3,6 @@
 import { useEffect, useState, Fragment } from 'react'
 import { Header } from '@/components/layout/Header'
 import { Card } from '@/components/ui/Card'
-import { BalanceChart } from '@/components/charts/BalanceChart'
-import { DistributionChart } from '@/components/charts/DistributionChart'
 import { formatCurrency, formatDate, normalizeBalanceData } from '@/lib/utils'
 import { BalanceRecord } from '@/lib/types'
 import { ChevronDown, ChevronRight, Calendar } from 'lucide-react'
@@ -27,15 +25,13 @@ export default function TotalsPage() {
 
   // Función para formatear la fecha en español
   const formatSpanishDate = (dateString: string): string => {
-    const date = new Date(dateString)
+    // Evitar problemas de zona horaria parseando manualmente
+    const [year, month, day] = dateString.split('-')
     const months = [
       'Ene', 'Feb', 'Mar', 'Abr', 'May', 'Jun',
       'Jul', 'Ago', 'Sep', 'Oct', 'Nov', 'Dic'
     ]
-    const day = date.getDate()
-    const month = months[date.getMonth()]
-    const year = date.getFullYear()
-    return `${day} ${month} ${year}`
+    return `${parseInt(day)} ${months[parseInt(month) - 1]} ${year}`
   }
 
   useEffect(() => {
@@ -83,7 +79,7 @@ export default function TotalsPage() {
     <div className="min-h-screen">
       <Header
         title='Balance Totals'
-        subtitle={'Fecha: ' + formatDate(data.date)}
+        subtitle={'Fecha: ' + (data.date ? data.date.split('-').reverse().join('/') : 'N/A')}
       />
 
       <div className='p-4 sm:p-6 lg:p-8 space-y-6 sm:space-y-8'>
@@ -123,28 +119,18 @@ export default function TotalsPage() {
             <p className='text-3xl font-bold text-gray-900'>{data.recordCount}</p>
           </Card>
           <Card title='Fecha de Datos'>
-            <p className='text-3xl font-bold text-gray-900'>{formatDate(data.date, 'dd/MM/yyyy')}</p>
+            <p className='text-3xl font-bold text-gray-900'>
+              {data.date ? data.date.split('-').reverse().join('/') : 'N/A'}
+            </p>
           </Card>
           <Card title='Última Actualización'>
             <p className='text-lg font-bold text-gray-900'>
-              {new Date(data.insertedAt).toLocaleString('es-CL')}
+              {data.insertedAt ? new Date(data.insertedAt).toLocaleTimeString('es-CL', { hour: '2-digit', minute: '2-digit' }) : 'N/A'}
             </p>
           </Card>
         </div>
 
-        {/* Charts */}
-        <div className='grid grid-cols-1 gap-4 sm:gap-6 xl:grid-cols-2'>
-          <BalanceChart
-            data={data.data.map(normalizeBalanceData)}
-            title='Top 10 Cuentas'
-            subtitle='Debe vs Haber'
-          />
-          <DistributionChart
-            data={data.data.map(normalizeBalanceData)}
-            title='Distribución de Balance'
-            subtitle='Top 6 cuentas por balance'
-          />
-        </div>
+        {/* Charts removed as requested */}
 
         {/* Data Table - 6 COLUMNAS (solo datos de DB) */}
         <Card title='Detalle de Cuentas' subtitle={'Total: ' + data.recordCount + ' registros'}>

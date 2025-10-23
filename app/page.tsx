@@ -1,6 +1,6 @@
 import { Header } from '@/components/layout/Header'
-import { StatCard, Card } from '@/components/ui/Card'
-import { TrendingUp, Users, DollarSign, Activity } from 'lucide-react'
+import { Card } from '@/components/ui/Card'
+import { TrendingUp, Users, DollarSign } from 'lucide-react'
 import Link from 'next/link'
 import { getDatabase } from '@/lib/mongodb'
 
@@ -49,33 +49,7 @@ export default async function HomePage() {
       />
 
       <div className='p-4 sm:p-6 lg:p-8 space-y-6 sm:space-y-8'>
-        {/* Stats Grid */}
-        <div className='grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4 sm:gap-6'>
-          <StatCard
-            title='Balance Totals'
-            value={health?.collections?.balance_totals?.recordCount || 0}
-            subtitle='Registros totales'
-            icon={<TrendingUp className='h-6 w-6 text-blue-600' />}
-          />
-          <StatCard
-            title='Balance Standard'
-            value={health?.collections?.balance_standard?.recordCount || 0}
-            subtitle='Cuentas estándar'
-            icon={<Users className='h-6 w-6 text-green-600' />}
-          />
-          <StatCard
-            title='Balance 8 Columns'
-            value={health?.collections?.balance_8columns?.recordCount || 0}
-            subtitle='Registros detallados'
-            icon={<DollarSign className='h-6 w-6 text-yellow-600' />}
-          />
-          <StatCard
-            title='Estado Sistema'
-            value={health?.healthy ? 'Activo' : 'Inactivo'}
-            subtitle='Última actualización'
-            icon={<Activity className='h-6 w-6 text-purple-600' />}
-          />
-        </div>
+        {/* (Stats Grid removed as requested) */}
 
         {/* Quick Links */}
         <div className='grid grid-cols-1 gap-4 sm:gap-6 md:grid-cols-2 lg:grid-cols-3'>
@@ -121,19 +95,7 @@ export default async function HomePage() {
             </Card>
           </Link>
 
-          <Link href='/dashboard/indicadores-financieros' className='block group'>
-            <Card className='group-hover:shadow-lg group-hover:scale-[1.02] transition-all duration-200 cursor-pointer'>
-              <div className='flex items-center justify-between'>
-                <div>
-                  <h3 className='font-semibold text-gray-900'>Indicadores Financieros</h3>
-                  <p className='mt-2 text-sm text-gray-600'>
-                    Ratios e indicadores de liquidez
-                  </p>
-                </div>
-                <TrendingUp className='h-8 w-8 text-purple-500' />
-              </div>
-            </Card>
-          </Link>
+          {/* Indicadores Financieros removed as requested */}
         </div>
 
         {/* Recent Activity */}

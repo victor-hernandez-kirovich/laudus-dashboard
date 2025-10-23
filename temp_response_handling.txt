@@ -1,0 +1,54 @@
+﻿      const result = await response.json()
+
+      if (!response.ok) {
+        throw new Error(result.error || 'Error al cargar datos')
+      }
+
+      // GitHub Actions triggered successfully
+      if (result.details) {
+        addLog('')
+        addLog(' GitHub Actions workflow disparado exitosamente')
+        addLog( Fecha: )
+        addLog( Endpoints: )
+        addLog('')
+        addLog(' Ve a GitHub Actions para ver el progreso:')
+        addLog('   https://github.com/victor-hernandez-kirovich/laudus-api/actions')
+        addLog('')
+        addLog('  El proceso puede tardar 10-15 minutos')
+        addLog(' Los datos se guardarán automáticamente en MongoDB')
+        
+        // Mark all enabled endpoints as success (workflow triggered)
+        setEndpoints(prev => prev.map(endpoint => 
+          endpoint.enabled ? { ...endpoint, status: 'success' as const } : endpoint
+        ))
+      } else if (result.results) {
+        // Local execution (legacy support)
+        setEndpoints(prev => prev.map(endpoint => {
+          const result_item = result.results.find((r: any) => r.endpoint === endpoint.name)
+          if (!result_item) return endpoint
+
+          return {
+            ...endpoint,
+            status: result_item.success ? 'success' : 'error',
+            records: result_item.records,
+            error: result_item.error
+          }
+        }))
+
+        result.results.forEach((r: any) => {
+          if (r.success) {
+            addLog( :  registros guardados)
+          } else {
+            addLog( : )
+          }
+        })
+
+        addLog('')
+        addLog(result.message)
+
+        if (result.success) {
+          addLog(' ¡Proceso completado exitosamente!')
+        } else {
+          addLog(' Proceso completado con errores')
+        }
+      }
