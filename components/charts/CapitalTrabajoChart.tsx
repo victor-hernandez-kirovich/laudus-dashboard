@@ -21,11 +21,11 @@ interface WorkingCapitalData {
   pasivosCorrientes: number
 }
 
-interface WorkingCapitalChartProps {
+interface CapitalTrabajoChartProps {
   data: WorkingCapitalData[]
 }
 
-export function WorkingCapitalChart({ data }: WorkingCapitalChartProps) {
+export function CapitalTrabajoChart({ data }: CapitalTrabajoChartProps) {
   // Preparar datos para el gráfico (invertir orden para mostrar cronológicamente)
   const chartData = [...data].reverse().map(item => ({
     date: new Date(item.date).toLocaleDateString('es-CL', { 

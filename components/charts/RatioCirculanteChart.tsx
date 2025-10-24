@@ -3,7 +3,7 @@
 import { Card } from '@/components/ui/Card'
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, ReferenceLine } from 'recharts'
 
-interface CurrentRatioChartProps {
+interface RatioCirculanteChartProps {
   data: {
     date: string
     ratio: number
@@ -12,7 +12,7 @@ interface CurrentRatioChartProps {
   }[]
 }
 
-export function CurrentRatioChart({ data }: CurrentRatioChartProps) {
+export function RatioCirculanteChart({ data }: RatioCirculanteChartProps) {
   const formatSpanishDate = (dateString: string): string => {
     const date = new Date(dateString)
     const day = date.getDate()
@@ -37,7 +37,7 @@ export function CurrentRatioChart({ data }: CurrentRatioChartProps) {
   })).reverse() // Invertir para mostrar cronológicamente
 
   return (
-    <Card title="Evolución del Current Ratio" subtitle={`Últimos ${data.length} registros`}>
+    <Card title="Evolución del Ratio Circulante" subtitle={`Últimos ${data.length} registros`}>
       <div className='h-80'>
         <ResponsiveContainer width="100%" height="100%">
           <LineChart data={chartData} margin={{ top: 5, right: 20, left: 10, bottom: 5 }}>
@@ -61,7 +61,7 @@ export function CurrentRatioChart({ data }: CurrentRatioChartProps) {
               }}
               formatter={(value: any, name: string) => {
                 if (name === 'ratio') {
-                  return [value.toFixed(2), 'Current Ratio']
+                  return [value.toFixed(2), 'Ratio Circulante']
                 }
                 if (name === 'activos') {
                   return [formatCurrency(value), 'Activos Corrientes']
