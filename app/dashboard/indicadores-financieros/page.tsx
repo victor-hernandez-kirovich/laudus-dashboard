@@ -6,12 +6,20 @@ import { Card } from '@/components/ui/Card'
 import { formatCurrency, formatDate } from '@/lib/utils'
 import { Calendar, Info, TrendingUp, TrendingDown } from 'lucide-react'
 import { CurrentRatioChart } from '@/components/charts/CurrentRatioChart'
+import { WorkingCapitalChart } from '@/components/charts/WorkingCapitalChart'
 
 interface RatioData {
   date: string
   ratio: number
   activos: number
   pasivos: number
+}
+
+interface WorkingCapitalData {
+  date: string
+  workingCapital: number
+  activosCorrientes: number
+  pasivosCorrientes: number
 }
 
 export default function IndicadoresFinancierosPage() {
@@ -74,6 +82,31 @@ export default function IndicadoresFinancierosPage() {
     })
   }
 
+  // Calcular Capital de Trabajo para cada fecha
+  const calculateWorkingCapital = (): WorkingCapitalData[] => {
+    return allData.map(record => {
+      const records = record.data || []
+      
+      // Buscar Activos Corrientes (accountNumber "11")
+      const activosCorrientes = records.find((r: any) => r.accountNumber === "11")
+      const activos = activosCorrientes?.assets || 0
+      
+      // Buscar Pasivos Corrientes (accountNumber "21")
+      const pasivosCorrientes = records.find((r: any) => r.accountNumber === "21")
+      const pasivos = pasivosCorrientes?.liabilities || 0
+      
+      // Capital de Trabajo = Activos Corrientes - Pasivos Corrientes
+      const workingCapital = activos - pasivos
+      
+      return {
+        date: record.date,
+        workingCapital: workingCapital,
+        activosCorrientes: activos,
+        pasivosCorrientes: pasivos
+      }
+    })
+  }
+
   if (loading) {
     return (
       <div>
@@ -110,10 +143,13 @@ export default function IndicadoresFinancierosPage() {
   }
 
   const currentRatios = calculateCurrentRatios()
+  const workingCapitalData = calculateWorkingCapital()
   const latestRatio = currentRatios[0]
+  const latestCapital = workingCapitalData[0]
   const currentRatio = latestRatio?.ratio || 0
   const activos = latestRatio?.activos || 0
   const pasivos = latestRatio?.pasivos || 0
+  const workingCapital = latestCapital?.workingCapital || 0
 
   return (
     <div>
@@ -289,46 +325,10 @@ export default function IndicadoresFinancierosPage() {
         {/* CASO 3: Más de 5 fechas - Vista completa con gráfico */}
         {allData.length > 5 && (
           <>
-            {/* Controles de período */}
+            {/* Selector de agrupación */}
             <Card>
-              <div className='flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4'>
-                <div className='flex items-center gap-2'>
-                  <Calendar className='h-5 w-5 text-blue-600' />
-                  <label className='text-sm font-medium text-gray-700'>Período:</label>
-                  <div className='flex gap-2'>
-                    <button 
-                      onClick={() => setPeriod(7)}
-                      className={`px-3 py-1 text-sm rounded-md transition-colors ${
-                        period === 7 
-                          ? 'bg-blue-600 text-white' 
-                          : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
-                      }`}
-                    >
-                      7 días
-                    </button>
-                    <button 
-                      onClick={() => setPeriod(15)}
-                      className={`px-3 py-1 text-sm rounded-md transition-colors ${
-                        period === 15 
-                          ? 'bg-blue-600 text-white' 
-                          : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
-                      }`}
-                    >
-                      15 días
-                    </button>
-                    <button 
-                      onClick={() => setPeriod(30)}
-                      className={`px-3 py-1 text-sm rounded-md transition-colors ${
-                        period === 30 
-                          ? 'bg-blue-600 text-white' 
-                          : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
-                      }`}
-                    >
-                      30 días
-                    </button>
-                  </div>
-                </div>
-
+              <div className='flex items-center justify-between gap-4'>
+                <h1 className='text-3xl font-bold text-gray-900'>Current Ratio</h1>
                 <div className='flex items-center gap-2'>
                   <label className='text-sm font-medium text-gray-700'>Agrupar por:</label>
                   <select 
@@ -344,39 +344,36 @@ export default function IndicadoresFinancierosPage() {
               </div>
             </Card>
 
-            {/* Gráfico de evolución */}
-            <div className='grid grid-cols-1 lg:grid-cols-3 gap-6'>
-              <div className='lg:col-span-2'>
-                <CurrentRatioChart data={currentRatios.slice(0, period)} />
-              </div>
-              
-              <Card title="Ratio Actual">
-                <div className='text-center py-6'>
-                  <div className='text-5xl font-bold text-blue-600'>
-                    {currentRatio.toFixed(2)}
+            {/* Ratio Actual - Full Width */}
+            <Card >
+              <div className='text-center py-6'>
+                <div className='text-5xl font-bold text-blue-600'>
+                  {currentRatio.toFixed(2)}
+                </div>
+                <div className='mt-3 text-sm'>
+                  {currentRatio > 1.5 ? (
+                    <span className='text-green-600 font-semibold'>✓ Saludable</span>
+                  ) : currentRatio >= 1 ? (
+                    <span className='text-orange-600 font-semibold'>⚠ Aceptable</span>
+                  ) : (
+                    <span className='text-red-600 font-semibold'>✗ Bajo</span>
+                  )}
+                </div>
+                <div className='mt-6 flex justify-center gap-8'>
+                  <div className='text-center'>
+                    <div className='text-sm text-gray-700 font-medium'>Activos</div>
+                    <div className='font-semibold text-gray-900'>{formatCurrency(activos)}</div>
                   </div>
-                  <div className='mt-3 text-sm'>
-                    {currentRatio > 1.5 ? (
-                      <span className='text-green-600 font-semibold'>✓ Saludable</span>
-                    ) : currentRatio >= 1 ? (
-                      <span className='text-orange-600 font-semibold'>⚠ Aceptable</span>
-                    ) : (
-                      <span className='text-red-600 font-semibold'>✗ Bajo</span>
-                    )}
-                  </div>
-                  <div className='mt-6 text-left space-y-2'>
-                    <div className='flex justify-between text-sm'>
-                      <span className='text-gray-600'>Activos:</span>
-                      <span className='font-semibold'>{formatCurrency(activos)}</span>
-                    </div>
-                    <div className='flex justify-between text-sm'>
-                      <span className='text-gray-600'>Pasivos:</span>
-                      <span className='font-semibold'>{formatCurrency(pasivos)}</span>
-                    </div>
+                  <div className='text-center'>
+                    <div className='text-sm text-gray-700 font-medium'>Pasivos</div>
+                    <div className='font-semibold text-gray-900'>{formatCurrency(pasivos)}</div>
                   </div>
                 </div>
-              </Card>
-            </div>
+              </div>
+            </Card>
+
+            {/* Gráfico de evolución - Full Width */}
+            <CurrentRatioChart data={currentRatios.slice(0, period)} />
 
             {/* Interpretación */}
             <Card title="Interpretación del Current Ratio">
@@ -386,6 +383,72 @@ export default function IndicadoresFinancierosPage() {
                 </p>
               </div>
             </Card>
+
+            {/* CAPITAL DE TRABAJO */}
+            <div className='border-t-4 border-gray-200 pt-8 mt-8'>
+              <Card>
+                <div className='flex items-center justify-between gap-4 mb-6'>
+                  <h2 className='text-3xl font-bold text-gray-900'>Capital de Trabajo</h2>
+                </div>
+              </Card>
+
+              {/* Capital de Trabajo Actual */}
+              <Card>
+                <div className='text-center py-6'>
+                  <div className='text-5xl font-bold' style={{ color: workingCapital >= 0 ? '#10b981' : '#ef4444' }}>
+                    {formatCurrency(workingCapital)}
+                  </div>
+                  <div className='mt-3 text-sm'>
+                    {workingCapital >= 0 ? (
+                      <span className='text-green-600 font-semibold'>✓ Positivo</span>
+                    ) : (
+                      <span className='text-red-600 font-semibold'>✗ Negativo</span>
+                    )}
+                  </div>
+                  <div className='mt-6 flex justify-center gap-8'>
+                    <div className='text-center'>
+                      <div className='text-sm text-gray-700 font-medium'>Activos Corrientes</div>
+                      <div className='font-semibold text-green-600'>{formatCurrency(activos)}</div>
+                    </div>
+                    <div className='text-center'>
+                      <div className='text-sm text-gray-700 font-medium'>Pasivos Corrientes</div>
+                      <div className='font-semibold text-red-600'>{formatCurrency(pasivos)}</div>
+                    </div>
+                  </div>
+                </div>
+              </Card>
+
+              {/* Gráfico de evolución del Capital de Trabajo */}
+              <WorkingCapitalChart data={workingCapitalData.slice(0, period)} />
+
+              {/* Interpretación */}
+              <Card title="Interpretación del Capital de Trabajo">
+                <div className='text-sm text-gray-700 space-y-3'>
+                  <p>
+                    El <strong>Capital de Trabajo</strong> representa la diferencia entre tus activos corrientes y pasivos corrientes. Es un indicador clave de la salud financiera a corto plazo.
+                  </p>
+                  <p>
+                    Tu capital de trabajo actual es <strong className='text-lg' style={{ color: workingCapital >= 0 ? '#10b981' : '#ef4444' }}>
+                      {formatCurrency(workingCapital)}
+                    </strong>.
+                  </p>
+                  <ul className='mt-4 space-y-2 pl-4'>
+                    <li className='flex items-start gap-2'>
+                      <span className='text-green-600'>•</span>
+                      <span><strong>Positivo:</strong> La empresa tiene recursos suficientes para operar y crecer</span>
+                    </li>
+                    <li className='flex items-start gap-2'>
+                      <span className='text-red-600'>•</span>
+                      <span><strong>Negativo:</strong> Puede indicar problemas de liquidez y dificultades para cubrir obligaciones</span>
+                    </li>
+                    <li className='flex items-start gap-2'>
+                      <span className='text-blue-600'>•</span>
+                      <span><strong>Fórmula:</strong> Capital de Trabajo = Activos Corrientes - Pasivos Corrientes</span>
+                    </li>
+                  </ul>
+                </div>
+              </Card>
+            </div>
           </>
         )}
       </div>
