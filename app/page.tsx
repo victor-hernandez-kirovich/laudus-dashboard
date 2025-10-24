@@ -8,29 +8,29 @@ async function getHealthStatus() {
   try {
     const db = await getDatabase()
     
-    // Obtener datos de las 3 colecciones
-    const [totalsDoc, standardDoc, columnsDoc] = await Promise.all([
-      db.collection('balance_totals').findOne(),
-      db.collection('balance_standard').findOne(),
-      db.collection('balance_8columns').findOne()
-    ])
+    // Obtener datos de las 3 colecciones (último automático y manual de cada una)
+    const collections = ['balance_totals', 'balance_standard', 'balance_8columns']
+    
+    const results = await Promise.all(
+      collections.map(async (collectionName) => {
+        const collection = db.collection(collectionName)
+        
+        const [automaticDocs, manualDocs] = await Promise.all([
+          collection.find({ loadSource: 'automatic' }).sort({ insertedAt: -1 }).limit(1).toArray(),
+          collection.find({ loadSource: 'manual' }).sort({ insertedAt: -1 }).limit(1).toArray()
+        ])
+        
+        return {
+          name: collectionName,
+          automatic: automaticDocs[0] || null,
+          manual: manualDocs[0] || null
+        }
+      })
+    )
 
     return {
       healthy: true,
-      collections: {
-        balance_totals: {
-          recordCount: totalsDoc?.data?.length || 0,
-          lastUpdate: totalsDoc?.insertedAt || null
-        },
-        balance_standard: {
-          recordCount: standardDoc?.data?.length || 0,
-          lastUpdate: standardDoc?.insertedAt || null
-        },
-        balance_8columns: {
-          recordCount: columnsDoc?.data?.length || 0,
-          lastUpdate: columnsDoc?.insertedAt || null
-        }
-      }
+      collections: results
     }
   } catch (error) {
     console.error('Error fetching MongoDB data:', error)
@@ -100,22 +100,71 @@ export default async function HomePage() {
 
         {/* Recent Activity */}
         <Card title='Actividad Reciente' subtitle='Últimas actualizaciones de datos'>
-          <div className='space-y-4'>
-            {health?.collections && Object.entries(health.collections).map(([name, data]: [string, any]) => (
-              <div key={name} className='flex items-center justify-between border-b border-gray-100 pb-3'>
-                <div>
-                  <p className='font-medium text-gray-900'>{name.replace('balance_', 'Balance ')}</p>
-                  <p className='text-sm text-gray-600'>
-                    {data.recordCount} registros
-                  </p>
-                </div>
-                <div className='text-right'>
-                  <p className='text-sm text-gray-600'>
-                    {data.lastUpdate ? new Date(data.lastUpdate).toLocaleString('es-CL') : 'N/A'}
-                  </p>
-                </div>
+          <div className='space-y-6'>
+            {/* Carga Automática */}
+            <div>
+              <div className='flex items-center gap-2 mb-3'>
+                <span className='text-2xl'>🤖</span>
+                <h3 className='font-semibold text-gray-900'>Carga Automática</h3>
+                <span className='px-2 py-1 text-xs font-medium text-blue-700 bg-blue-100 rounded-full'>
+                  Diaria
+                </span>
               </div>
-            ))}
+              <div className='space-y-3 ml-8'>
+                {health?.collections && health.collections.map((col: any) => {
+                  const doc = col.automatic
+                  return (
+                    <div key={`auto-${col.name}`} className='flex items-center justify-between border-b border-gray-100 pb-2'>
+                      <div>
+                        <p className='font-medium text-gray-900'>{col.name.replace('balance_', 'Balance ')}</p>
+                        <p className='text-sm text-gray-600'>
+                          {doc?.recordCount || 0} registros
+                        </p>
+                      </div>
+                      <div className='text-right'>
+                        <p className='text-sm text-gray-600'>
+                          {doc?.insertedAt ? new Date(doc.insertedAt).toLocaleString('es-CL') : 'N/A'}
+                        </p>
+                      </div>
+                    </div>
+                  )
+                })}
+              </div>
+            </div>
+
+            {/* Separador */}
+            <div className='border-t-2 border-gray-200'></div>
+
+            {/* Carga Manual */}
+            <div>
+              <div className='flex items-center gap-2 mb-3'>
+                <span className='text-2xl'>👤</span>
+                <h3 className='font-semibold text-gray-900'>Carga Manual</h3>
+                <span className='px-2 py-1 text-xs font-medium text-green-700 bg-green-100 rounded-full'>
+                  Bajo demanda
+                </span>
+              </div>
+              <div className='space-y-3 ml-8'>
+                {health?.collections && health.collections.map((col: any) => {
+                  const doc = col.manual
+                  return (
+                    <div key={`manual-${col.name}`} className='flex items-center justify-between border-b border-gray-100 pb-2'>
+                      <div>
+                        <p className='font-medium text-gray-900'>{col.name.replace('balance_', 'Balance ')}</p>
+                        <p className='text-sm text-gray-600'>
+                          {doc?.recordCount || 0} registros
+                        </p>
+                      </div>
+                      <div className='text-right'>
+                        <p className='text-sm text-gray-600'>
+                          {doc?.insertedAt ? new Date(doc.insertedAt).toLocaleString('es-CL') : 'N/A'}
+                        </p>
+                      </div>
+                    </div>
+                  )
+                })}
+              </div>
+            </div>
           </div>
         </Card>
       </div>
