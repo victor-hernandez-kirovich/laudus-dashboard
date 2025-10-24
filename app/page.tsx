@@ -15,10 +15,19 @@ async function getHealthStatus() {
       collections.map(async (collectionName) => {
         const collection = db.collection(collectionName)
         
-        const [automaticDocs, manualDocs] = await Promise.all([
-          collection.find({ loadSource: 'automatic' }).sort({ insertedAt: -1 }).limit(1).toArray(),
-          collection.find({ loadSource: 'manual' }).sort({ insertedAt: -1 }).limit(1).toArray()
-        ])
+        // Obtener el último documento automático (con loadSource: 'automatic' o sin loadSource para retrocompatibilidad)
+        const automaticDocs = await collection
+          .find({ $or: [{ loadSource: 'automatic' }, { loadSource: { $exists: false } }] })
+          .sort({ insertedAt: -1 })
+          .limit(1)
+          .toArray()
+        
+        // Obtener el último documento manual
+        const manualDocs = await collection
+          .find({ loadSource: 'manual' })
+          .sort({ insertedAt: -1 })
+          .limit(1)
+          .toArray()
         
         return {
           name: collectionName,
