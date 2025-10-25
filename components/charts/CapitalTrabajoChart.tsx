@@ -3,15 +3,14 @@
 import { Card } from '@/components/ui/Card'
 import { formatCurrency } from '@/lib/utils'
 import { 
-  AreaChart, 
-  Area, 
+  BarChart, 
+  Bar, 
   XAxis, 
   YAxis, 
   CartesianGrid, 
   Tooltip, 
   ResponsiveContainer,
-  Legend,
-  ReferenceLine
+  Legend
 } from 'recharts'
 
 interface WorkingCapitalData {
@@ -21,41 +20,48 @@ interface WorkingCapitalData {
   pasivosCorrientes: number
 }
 
-interface CapitalTrabajoChartProps {
+interface WorkingCapitalChartProps {
   data: WorkingCapitalData[]
 }
 
-export function CapitalTrabajoChart({ data }: CapitalTrabajoChartProps) {
+export function WorkingCapitalChart({ data }: WorkingCapitalChartProps) {
+  const formatSpanishDate = (dateString: string): string => {
+    // Usar parsing directo para evitar problemas de zona horaria
+    const [year, month] = dateString.split('-').map(Number)
+    const months = [
+      'Ene', 'Feb', 'Mar', 'Abr', 'May', 'Jun',
+      'Jul', 'Ago', 'Sep', 'Oct', 'Nov', 'Dic'
+    ]
+    const yearShort = year.toString().slice(-2) // Últimos 2 dígitos del año
+    return `${months[month - 1]} ${yearShort}`
+  }
+
   // Preparar datos para el gráfico (invertir orden para mostrar cronológicamente)
   const chartData = [...data].reverse().map(item => ({
-    date: new Date(item.date).toLocaleDateString('es-CL', { 
-      day: '2-digit', 
-      month: 'short' 
-    }),
-    'Capital de Trabajo': item.workingCapital,
-    'Activos Corrientes': item.activosCorrientes,
-    'Pasivos Corrientes': item.pasivosCorrientes
+    date: formatSpanishDate(item.date),
+    'Capital de Trabajo': item.workingCapital
   }))
 
-  // Calcular el valor promedio para la línea de referencia
+  // Calcular estadísticas
   const avgCapital = data.reduce((sum, item) => sum + item.workingCapital, 0) / data.length
+  const maxCapital = Math.max(...data.map(d => d.workingCapital))
+  const minCapital = Math.min(...data.map(d => d.workingCapital))
 
   // Custom tooltip
   const CustomTooltip = ({ active, payload, label }: any) => {
     if (active && payload && payload.length) {
+      const value = payload[0].value
       return (
         <div className='bg-white p-4 border border-gray-200 rounded-lg shadow-lg'>
           <p className='font-semibold text-gray-900 mb-2'>{label}</p>
-          {payload.map((entry: any, index: number) => (
-            <div key={index} className='flex items-center justify-between gap-4 text-sm'>
-              <span style={{ color: entry.color }} className='font-medium'>
-                {entry.name}:
-              </span>
-              <span className='font-bold'>
-                {formatCurrency(entry.value)}
-              </span>
-            </div>
-          ))}
+          <div className='flex items-center justify-between gap-4 text-sm'>
+            <span className='font-medium' style={{ color: '#d4a574' }}>
+              Capital de Trabajo:
+            </span>
+            <span className='font-bold'>
+              {formatCurrency(value)}
+            </span>
+          </div>
         </div>
       )
     }
@@ -63,87 +69,36 @@ export function CapitalTrabajoChart({ data }: CapitalTrabajoChartProps) {
   }
 
   return (
-    <Card title='Evolución del Capital de Trabajo' subtitle='Tendencia histórica'>
+    <Card title='💼 Capital de Trabajo' subtitle={`Últimos ${data.length} registros`}>
       <div className='h-80 w-full'>
         <ResponsiveContainer width='100%' height='100%'>
-          <AreaChart
+          <BarChart
             data={chartData}
-            margin={{ top: 10, right: 30, left: 20, bottom: 30 }}
+            margin={{ top: 10, right: 30, left: 20, bottom: 5 }}
           >
-            <defs>
-              <linearGradient id='colorCapital' x1='0' y1='0' x2='0' y2='1'>
-                <stop offset='5%' stopColor='#3b82f6' stopOpacity={0.8}/>
-                <stop offset='95%' stopColor='#3b82f6' stopOpacity={0.1}/>
-              </linearGradient>
-              <linearGradient id='colorActivos' x1='0' y1='0' x2='0' y2='1'>
-                <stop offset='5%' stopColor='#10b981' stopOpacity={0.6}/>
-                <stop offset='95%' stopColor='#10b981' stopOpacity={0.05}/>
-              </linearGradient>
-              <linearGradient id='colorPasivos' x1='0' y1='0' x2='0' y2='1'>
-                <stop offset='5%' stopColor='#ef4444' stopOpacity={0.6}/>
-                <stop offset='95%' stopColor='#ef4444' stopOpacity={0.05}/>
-              </linearGradient>
-            </defs>
             <CartesianGrid strokeDasharray='3 3' stroke='#e5e7eb' />
             <XAxis 
               dataKey='date' 
               stroke='#6b7280'
               style={{ fontSize: '12px' }}
-              angle={-45}
-              textAnchor='end'
-              height={60}
             />
             <YAxis 
               stroke='#6b7280'
               style={{ fontSize: '12px' }}
-              tickFormatter={(value) => `$${(value / 1000000).toFixed(1)}M`}
+              tickFormatter={(value) => `$${(value / 1000).toFixed(0)}K`}
             />
             <Tooltip content={<CustomTooltip />} />
             <Legend 
-              wrapperStyle={{ paddingTop: '20px' }}
-              iconType='line'
+              wrapperStyle={{ paddingTop: '10px' }}
+              iconType='rect'
             />
             
-            {/* Línea de referencia para el promedio */}
-            <ReferenceLine 
-              y={avgCapital} 
-              stroke='#9ca3af' 
-              strokeDasharray='5 5'
-              label={{ value: 'Promedio', position: 'insideTopRight', fill: '#6b7280', fontSize: 12 }}
+            <Bar 
+              dataKey='Capital de Trabajo' 
+              fill='#d4a574'
+              radius={[4, 4, 0, 0]}
             />
-            
-            {/* Línea de referencia en 0 */}
-            <ReferenceLine 
-              y={0} 
-              stroke='#374151' 
-              strokeWidth={2}
-            />
-            
-            <Area
-              type='monotone'
-              dataKey='Activos Corrientes'
-              stroke='#10b981'
-              strokeWidth={2}
-              fill='url(#colorActivos)'
-              fillOpacity={0.3}
-            />
-            <Area
-              type='monotone'
-              dataKey='Pasivos Corrientes'
-              stroke='#ef4444'
-              strokeWidth={2}
-              fill='url(#colorPasivos)'
-              fillOpacity={0.3}
-            />
-            <Area
-              type='monotone'
-              dataKey='Capital de Trabajo'
-              stroke='#3b82f6'
-              strokeWidth={3}
-              fill='url(#colorCapital)'
-              fillOpacity={1}
-            />
-          </AreaChart>
+          </BarChart>
         </ResponsiveContainer>
       </div>
 
@@ -158,13 +113,55 @@ export function CapitalTrabajoChart({ data }: CapitalTrabajoChartProps) {
         <div className='text-center'>
           <div className='text-sm text-gray-600'>Máximo</div>
           <div className='text-lg font-bold text-green-600'>
-            {formatCurrency(Math.max(...data.map(d => d.workingCapital)))}
+            {formatCurrency(maxCapital)}
           </div>
         </div>
         <div className='text-center'>
           <div className='text-sm text-gray-600'>Mínimo</div>
           <div className='text-lg font-bold text-red-600'>
-            {formatCurrency(Math.min(...data.map(d => d.workingCapital)))}
+            {formatCurrency(minCapital)}
+          </div>
+        </div>
+      </div>
+
+      {/* Fórmula de Cálculo */}
+      <div className='mt-6 pt-6 border-t border-gray-200'>
+        <h3 className='text-sm font-semibold text-gray-700 mb-4'>📐 Fórmula de Cálculo</h3>
+        <div className='bg-amber-50 border border-amber-200 rounded-lg p-4'>
+          <div className='mb-3'>
+            <h4 className='font-semibold text-gray-900 mb-2'>Capital de Trabajo</h4>
+            <div className='text-sm text-gray-700'>
+              <div className='font-mono bg-white px-3 py-2 rounded border border-amber-300'>
+                <div className='text-center'>
+                  <div className='font-semibold'>CT = Activos Corrientes − Pasivos Corrientes</div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          {/* Interpretación */}
+          <div className='mt-4 space-y-2 text-sm'>
+            <p className='font-semibold text-gray-800'>💡 Interpretación:</p>
+            <div className='space-y-1.5 ml-2'>
+              <div className='flex items-start gap-2'>
+                <span className='text-green-600 font-bold'>✅</span>
+                <span className='text-gray-700'>
+                  <strong>CT {'>'} 0:</strong> La empresa tiene recursos líquidos suficientes para cubrir sus obligaciones de corto plazo.
+                </span>
+              </div>
+              <div className='flex items-start gap-2'>
+                <span className='text-orange-600 font-bold'>⚠️</span>
+                <span className='text-gray-700'>
+                  <strong>CT = 0:</strong> Todo el activo corriente está comprometido en el pago de deudas.
+                </span>
+              </div>
+              <div className='flex items-start gap-2'>
+                <span className='text-red-600 font-bold'>🚨</span>
+                <span className='text-gray-700'>
+                  <strong>CT {'<'} 0:</strong> La empresa no puede cubrir sus deudas de corto plazo; hay riesgo de liquidez.
+                </span>
+              </div>
+            </div>
           </div>
         </div>
       </div>

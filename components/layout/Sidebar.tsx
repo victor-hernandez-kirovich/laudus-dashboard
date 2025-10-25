@@ -20,13 +20,23 @@ const navigation = [
   { name: 'Balance Totals', href: '/dashboard/totals', icon: TrendingUp },
   { name: 'Balance Standard', href: '/dashboard/standard', icon: FileText },
   { name: 'Balance 8 Columns', href: '/dashboard/8columns', icon: Table2 },
-  { name: 'Indicadores Financieros', href: '/dashboard/indicadores-financieros', icon: TrendingUp },
+  {
+    name: 'Indicadores Financieros',
+    href: '/dashboard/indicadores-financieros',
+    icon: TrendingUp,
+    children: [
+      { name: 'Ratio de Liquidez', href: '/dashboard/indicadores-financieros/ratio-circulante' },
+      { name: 'Capital de Trabajo', href: '/dashboard/indicadores-financieros/capital-trabajo' },
+      { name: 'Estructura Financiera', href: '/dashboard/indicadores-financieros/estructura-financiera' },
+    ]
+  },
   { name: 'Cargar Datos', href: '/dashboard/admin/load-data', icon: Database },
 ];
 
 export function Sidebar() {
   const pathname = usePathname();
   const [isOpen, setIsOpen] = useState(false);
+  const [expanded, setExpanded] = useState(false);
 
   const closeSidebar = () => setIsOpen(false);
 
@@ -67,8 +77,51 @@ export function Sidebar() {
         {/* Navigation */}
         <nav className="flex-1 space-y-1 px-3 py-4 overflow-y-auto">
           {navigation.map((item) => {
-            const isActive = pathname === item.href;
+            const isActive = pathname === item.href || pathname?.startsWith(item.href + '/');
             const Icon = item.icon;
+
+            // If item has children render expandable section
+            if (item.children && item.children.length > 0) {
+              const parentActive = pathname?.startsWith(item.href) ?? false;
+              return (
+                <div key={item.name}>
+                  <button
+                    onClick={() => setExpanded(prev => !prev)}
+                    className={cn(
+                      'w-full flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium transition-colors',
+                      parentActive || expanded
+                        ? 'bg-gray-800 text-white'
+                        : 'text-gray-400 hover:bg-gray-800 hover:text-white'
+                    )}
+                  >
+                    <Icon className="h-5 w-5 flex-shrink-0" />
+                    <span className="truncate">{item.name}</span>
+                    <span className="ml-auto text-xs opacity-80">{expanded || parentActive ? '▾' : '▸'}</span>
+                  </button>
+
+                  {(expanded || parentActive) && (
+                    <div className="mt-1 ml-8 space-y-1">
+                      {item.children.map((child: any) => {
+                        const childActive = pathname === child.href;
+                        return (
+                          <Link
+                            key={child.name}
+                            href={child.href}
+                            onClick={closeSidebar}
+                            className={cn(
+                              'block rounded-md px-3 py-2 text-sm transition-colors',
+                              childActive ? 'bg-gray-800 text-white' : 'text-gray-400 hover:bg-gray-800 hover:text-white'
+                            )}
+                          >
+                            {child.name}
+                          </Link>
+                        );
+                      })}
+                    </div>
+                  )}
+                </div>
+              );
+            }
 
             return (
               <Link
