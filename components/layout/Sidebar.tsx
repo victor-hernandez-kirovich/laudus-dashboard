@@ -28,6 +28,7 @@ const navigation = [
       { name: 'Ratio de Liquidez', href: '/dashboard/indicadores-financieros/ratio-circulante' },
       { name: 'Capital de Trabajo', href: '/dashboard/indicadores-financieros/capital-trabajo' },
       { name: 'Estructura Financiera', href: '/dashboard/indicadores-financieros/estructura-financiera' },
+      { name: 'Días de Cobro y Pago', href: '/dashboard/indicadores-financieros/dias-cobro-pago' },
     ]
   },
   { name: 'Cargar Datos', href: '/dashboard/admin/load-data', icon: Database },
