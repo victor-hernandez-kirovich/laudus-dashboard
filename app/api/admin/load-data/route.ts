@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { exec } from 'child_process'
+import { exec, spawn } from 'child_process'
 import { promisify } from 'util'
 import path from 'path'
 
@@ -21,7 +21,70 @@ interface LoadDataResponse {
   message: string
 }
 
-// Execute Python script locally
+// Execute Python script locally in background
+async function executeLocalPythonAsync(date: string, endpoints: string[]): Promise<NextResponse> {
+  try {
+    // Path to Python script in laudus-api repo (sibling directory)
+    const apiPath = path.join(process.cwd(), '..', 'laudus-api')
+    const scriptPath = path.join(apiPath, 'scripts', 'fetch_balancesheet_manual.py')
+    
+    // Map endpoint names
+    const endpointMap: { [key: string]: string } = {
+      'totals': 'totals',
+      'standard': 'standard',
+      '8Columns': '8columns'
+    }
+    
+    const mappedEndpoints = endpoints
+      .map(ep => endpointMap[ep])
+      .filter(Boolean)
+      .join(' ')
+    
+    console.log('[INFO] Starting Python script in background...')
+    console.log('[INFO] Script:', scriptPath)
+    console.log('[INFO] Date:', date, 'Endpoints:', mappedEndpoints)
+    
+    // Execute Python in background using spawn (no esperar)
+    const pythonProcess = spawn('python', [
+      scriptPath,
+      '--date', date,
+      '--endpoints', ...mappedEndpoints.split(' ')
+    ], {
+      cwd: apiPath,
+      detached: false,
+      stdio: 'ignore' // Ignora stdout/stderr para no bloquear
+    })
+    
+    // No esperamos a que termine
+    pythonProcess.unref() // Permite que el proceso continúe en segundo plano
+    
+    console.log('[INFO] Python script started with PID:', pythonProcess.pid)
+    console.log('[INFO] Process will run in background, client should poll for results')
+    
+    return NextResponse.json({
+      success: true,
+      mode: 'local-execution-async',
+      message: 'Python script started in background',
+      details: {
+        date,
+        endpoints,
+        note: 'El proceso está ejecutándose en segundo plano. El sistema monitoreará automáticamente el progreso.'
+      }
+    })
+    
+  } catch (error: any) {
+    console.error('[ERROR] Failed to start Python script:', error)
+    return NextResponse.json(
+      {
+        success: false,
+        error: error.message || 'Failed to start Python script locally'
+      },
+      { status: 500 }
+    )
+  }
+}
+
+// Execute Python script locally (legacy - synchronous)
 async function executeLocalPython(date: string, endpoints: string[]): Promise<NextResponse> {
   try {
     // Path to Python script in laudus-api repo (sibling directory)
@@ -65,6 +128,7 @@ async function executeLocalPython(date: string, endpoints: string[]): Promise<Ne
     return NextResponse.json({
       success: result.success,
       results: result.results,
+      mode: 'local-execution',
       message: result.success 
         ? 'Data loaded successfully' 
         : 'Some endpoints failed to load'
@@ -119,11 +183,13 @@ export async function POST(request: NextRequest) {
     // Validar que tenemos el token de GitHub
     const githubToken = process.env.GITHUB_TOKEN
     
-    // Si no hay GitHub token, ejecutar localmente
+    // Si no hay GitHub token, ejecutar localmente en segundo plano
     if (!githubToken) {
-      console.log('[DEBUG] No GitHub token found, executing Python script locally')
-      return await executeLocalPython(date, endpoints)
+      console.log('[INFO] No GitHub token found, executing Python script locally in background')
+      return await executeLocalPythonAsync(date, endpoints)
     }
+    
+    console.log('[INFO] GitHub token found, triggering GitHub Actions workflow')
 
     // Map endpoint names to GitHub Actions format
     const endpointMap: { [key: string]: string } = {
@@ -178,10 +244,13 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({
       success: true,
       message: 'GitHub Actions workflow triggered successfully',
+      mode: 'github-actions',
+      actionUrl: 'https://github.com/victor-hernandez-kirovich/laudus-api/actions',
+      workflowName: 'Laudus Manual',
       details: {
         date,
         endpoints,
-        note: 'Check GitHub Actions for progress and results'
+        note: 'El proceso está ejecutándose en GitHub Actions. Abre el enlace para ver el progreso en tiempo real.'
       }
     })
 
