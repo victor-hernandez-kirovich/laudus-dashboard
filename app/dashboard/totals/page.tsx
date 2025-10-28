@@ -3,13 +3,14 @@
 import { useEffect, useState, Fragment } from 'react'
 import { Header } from '@/components/layout/Header'
 import { Card } from '@/components/ui/Card'
+import { DatePicker } from '@/components/ui/DatePicker'
 import { formatCurrency, formatDate, normalizeBalanceData } from '@/lib/utils'
 import { BalanceRecord } from '@/lib/types'
 import { ChevronDown, ChevronRight, Calendar } from 'lucide-react'
 
 export default function TotalsPage() {
   const [allData, setAllData] = useState<BalanceRecord[]>([])
-  const [selectedIndex, setSelectedIndex] = useState(0)
+  const [selectedDate, setSelectedDate] = useState<string>('')
   const [loading, setLoading] = useState(true)
   const [expandedRows, setExpandedRows] = useState<Set<number>>(new Set())
 
@@ -23,17 +24,6 @@ export default function TotalsPage() {
     setExpandedRows(newExpanded)
   }
 
-  // Función para formatear la fecha en español
-  const formatSpanishDate = (dateString: string): string => {
-    // Evitar problemas de zona horaria parseando manualmente
-    const [year, month, day] = dateString.split('-')
-    const months = [
-      'Ene', 'Feb', 'Mar', 'Abr', 'May', 'Jun',
-      'Jul', 'Ago', 'Sep', 'Oct', 'Nov', 'Dic'
-    ]
-    return `${parseInt(day)} ${months[parseInt(month) - 1]} ${year}`
-  }
-
   useEffect(() => {
     async function fetchData() {
       try {
@@ -41,6 +31,8 @@ export default function TotalsPage() {
         const result = await res.json()
         if (result.success && result.data.length > 0) {
           setAllData(result.data)
+          // Seleccionar la fecha más reciente por defecto
+          setSelectedDate(result.data[0].date)
         }
       } catch (error) {
         console.error('Error fetching totals:', error)
@@ -73,7 +65,9 @@ export default function TotalsPage() {
     )
   }
 
-  const data = allData[selectedIndex]
+  // Buscar el registro que corresponde a la fecha seleccionada
+  const data = allData.find(record => record.date === selectedDate) || allData[0]
+  const availableDates = allData.map(record => record.date)
 
   return (
     <div className="min-h-screen">
@@ -83,35 +77,29 @@ export default function TotalsPage() {
       />
 
       <div className='p-4 sm:p-6 lg:p-8 space-y-6 sm:space-y-8'>
-        {/* Selector de Fechas */}
-        <Card>
-          <div className='flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 overflow-hidden'>
-            <div className='flex items-center gap-2 flex-shrink-0'>
-              <Calendar className='h-5 w-5 text-blue-600' />
-              <label className='text-sm font-medium text-gray-700'>
-                <span className='sm:hidden'>Fecha:</span>
-                <span className='hidden sm:inline'>Seleccionar Fecha del Balance:</span>
-              </label>
+        {/* Selector de Fechas con Calendario */}
+        <div className='bg-white rounded-lg shadow-sm border border-gray-200'>
+          <div className='p-6'>
+            <div className='flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4'>
+              <div className='flex items-center gap-2 flex-shrink-0'>
+                <Calendar className='h-5 w-5 text-blue-600' />
+                <label className='text-sm font-medium text-gray-700'>
+                  Seleccionar Fecha del Balance:
+                </label>
+              </div>
+              <DatePicker
+                availableDates={availableDates}
+                selectedDate={selectedDate}
+                onDateSelect={setSelectedDate}
+              />
             </div>
-            <select
-              value={selectedIndex}
-              onChange={(e) => setSelectedIndex(Number(e.target.value))}
-              className='w-full sm:w-auto px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-white text-gray-900 text-sm font-medium shadow-sm hover:border-gray-400 transition-colors max-w-full'
-              style={{ maxWidth: '100%' }}
-            >
-              {allData.map((record, idx) => (
-                <option key={idx} value={idx}>
-                  {formatSpanishDate(record.date)}
-                </option>
-              ))}
-            </select>
+            {allData.length > 1 && (
+              <div className='mt-2 text-xs text-gray-500'>
+                {allData.length} fechas disponibles en el histórico
+              </div>
+            )}
           </div>
-          {allData.length > 1 && (
-            <div className='mt-2 text-xs text-gray-500'>
-              {allData.length} fechas disponibles en el histórico
-            </div>
-          )}
-        </Card>
+        </div>
 
         {/* Summary Cards */}
         <div className='grid grid-cols-1 gap-4 sm:gap-6 sm:grid-cols-2 lg:grid-cols-3'>
