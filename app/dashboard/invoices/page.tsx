@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, Fragment } from 'react'
 import { Header } from '@/components/layout/Header'
 import { Card } from '@/components/ui/Card'
 import { formatCurrency } from '@/lib/utils'
@@ -305,8 +305,8 @@ export default function InvoicesPage() {
               </thead>
               <tbody className='bg-white divide-y divide-gray-200'>
                 {invoices.map((invoice) => (
-                  <>
-                    <tr key={invoice.month} className='hover:bg-gray-50'>
+                  <Fragment key={invoice.month}>
+                    <tr className='hover:bg-gray-50'>
                       <td className='px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900'>
                         {formatMonthName(invoice.month)}
                       </td>
@@ -370,7 +370,7 @@ export default function InvoicesPage() {
                         </td>
                       </tr>
                     )}
-                  </>
+                  </Fragment>
                 ))}
               </tbody>
             </table>

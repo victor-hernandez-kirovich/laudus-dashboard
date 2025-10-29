@@ -13,7 +13,8 @@ import {
   Menu,
   X,
   Database,
-  Receipt
+  Receipt,
+  Building2
 } from 'lucide-react';
 
 const navigation = [
@@ -22,6 +23,7 @@ const navigation = [
   { name: 'Balance Standard', href: '/dashboard/standard', icon: FileText },
   { name: 'Balance 8 Columns', href: '/dashboard/8columns', icon: Table2 },
   { name: 'Facturas Mensuales', href: '/dashboard/invoices', icon: Receipt },
+  { name: 'Facturas por Sucursal', href: '/dashboard/invoices/branch', icon: Building2 },
   {
     name: 'Indicadores Financieros',
     href: '/dashboard/indicadores-financieros',
