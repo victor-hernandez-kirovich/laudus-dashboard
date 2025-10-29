@@ -41,3 +41,22 @@ export interface DateRange {
   start: string;
   end: string;
 }
+
+export interface InvoicesBySalesmanData {
+  month: string;
+  year: number;
+  monthNumber: number;
+  monthName: string;
+  salesmanId: number;
+  salesmanName: string;
+  net: number;
+  netPercentage: number;
+  comissions: number;
+  margin: number;
+  marginPercentage: number;
+  discounts: number;
+  discountsPercentage: number;
+  numberOfDocuments: number;
+  averageTicket: number;
+  insertedAt: string;
+}

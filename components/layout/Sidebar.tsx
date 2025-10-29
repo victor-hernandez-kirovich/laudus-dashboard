@@ -14,7 +14,8 @@ import {
   X,
   Database,
   Receipt,
-  Building2
+  Building2,
+  Users
 } from 'lucide-react';
 
 const navigation = [
@@ -24,6 +25,7 @@ const navigation = [
   { name: 'Balance 8 Columns', href: '/dashboard/8columns', icon: Table2 },
   { name: 'Facturas Mensuales', href: '/dashboard/invoices', icon: Receipt },
   { name: 'Facturas por Sucursal', href: '/dashboard/invoices/branch', icon: Building2 },
+  { name: 'Facturas por Vendedor', href: '/dashboard/invoices/salesman', icon: Users },
   {
     name: 'Indicadores Financieros',
     href: '/dashboard/indicadores-financieros',
