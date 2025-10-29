@@ -3,7 +3,7 @@
 import { useState, useEffect, Fragment } from 'react'
 import { Card } from '@/components/ui/Card'
 import { formatCurrency } from '@/lib/utils'
-import { Building2, TrendingUp, TrendingDown, DollarSign, Percent, Tag, ChevronDown, ChevronUp } from 'lucide-react'
+import { Building2, TrendingUp, TrendingDown, DollarSign, Percent, Tag, ChevronDown, ChevronUp, Calendar } from 'lucide-react'
 
 interface BranchData {
   branch: string
@@ -16,7 +16,10 @@ interface BranchData {
 }
 
 interface InvoicesByBranchData {
-  dateRange: string
+  month: string
+  year: number
+  monthNumber: number
+  monthName: string
   startDate: string
   endDate: string
   branches: BranchData[]
@@ -30,7 +33,8 @@ interface InvoicesByBranchData {
 }
 
 export default function InvoicesByBranchPage() {
-  const [data, setData] = useState<InvoicesByBranchData | null>(null)
+  const [allData, setAllData] = useState<InvoicesByBranchData[]>([])
+  const [selectedMonth, setSelectedMonth] = useState<string>('')
   const [loading, setLoading] = useState(true)
   const [expandedBranch, setExpandedBranch] = useState<string | null>(null)
 
@@ -45,8 +49,9 @@ export default function InvoicesByBranchPage() {
       const result = await response.json()
       
       if (result.success && result.data.length > 0) {
-        // Get the most recent data
-        setData(result.data[0])
+        setAllData(result.data)
+        // Select the most recent month by default
+        setSelectedMonth(result.data[0].month)
       }
     } catch (error) {
       console.error('Error fetching invoices by branch:', error)
@@ -54,6 +59,8 @@ export default function InvoicesByBranchPage() {
       setLoading(false)
     }
   }
+
+  const data = allData.find(d => d.month === selectedMonth)
 
   const toggleBranch = (branchName: string) => {
     setExpandedBranch(expandedBranch === branchName ? null : branchName)
@@ -83,7 +90,7 @@ export default function InvoicesByBranchPage() {
     )
   }
 
-  if (!data) {
+  if (allData.length === 0) {
     return (
       <div className="p-6">
         <div className="text-center py-12">
@@ -97,16 +104,52 @@ export default function InvoicesByBranchPage() {
     )
   }
 
+  if (!data) {
+    return (
+      <div className="p-6">
+        <div className="text-center py-12">
+          <Building2 className="mx-auto h-12 w-12 text-gray-400" />
+          <h3 className="mt-2 text-sm font-semibold text-gray-900">Mes no encontrado</h3>
+        </div>
+      </div>
+    )
+  }
+
   // Sort branches by net sales descending
   const sortedBranches = [...data.branches].sort((a, b) => b.net - a.net)
 
   return (
     <div className="p-6 space-y-6">
-      {/* Header */}
-      <div>
-        <h1 className="text-2xl font-bold text-gray-900">Facturas por Sucursal</h1>
-        <p className="mt-1 text-sm text-gray-500">
-          Período: {formatDate(data.startDate)} - {formatDate(data.endDate)}
+      {/* Header with Month Selector */}
+      <div className="flex items-center justify-between">
+        <div>
+          <h1 className="text-2xl font-bold text-gray-900">Facturas por Sucursal</h1>
+          <p className="mt-1 text-sm text-gray-500">
+            Análisis de ventas por sucursal
+          </p>
+        </div>
+        
+        {/* Month Selector */}
+        <div className="flex items-center gap-2">
+          <Calendar className="h-5 w-5 text-gray-400" />
+          <select
+            value={selectedMonth}
+            onChange={(e) => setSelectedMonth(e.target.value)}
+            className="block w-48 rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm"
+          >
+            {allData.map((item) => (
+              <option key={item.month} value={item.month}>
+                {item.monthName} {item.year}
+              </option>
+            ))}
+          </select>
+        </div>
+      </div>
+
+      {/* Period Info */}
+      <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
+        <p className="text-sm text-blue-800">
+          <strong>Período:</strong> {formatDate(data.startDate)} - {formatDate(data.endDate)}
         </p>
       </div>
 

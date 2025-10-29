@@ -4,7 +4,9 @@ import clientPromise from '@/lib/mongodb'
 export async function GET(request: Request) {
   try {
     const { searchParams } = new URL(request.url)
-    const dateRange = searchParams.get('dateRange')
+    const month = searchParams.get('month')
+    const startMonth = searchParams.get('startMonth')
+    const endMonth = searchParams.get('endMonth')
     
     const client = await clientPromise
     const db = client.db('laudus_data')
@@ -12,13 +14,22 @@ export async function GET(request: Request) {
     
     let query = {}
     
-    if (dateRange) {
-      query = { dateRange }
+    if (month) {
+      // Single month query
+      query = { month }
+    } else if (startMonth && endMonth) {
+      // Range query
+      query = {
+        month: {
+          $gte: startMonth,
+          $lte: endMonth
+        }
+      }
     }
     
     const data = await collection
       .find(query)
-      .sort({ startDate: -1 })
+      .sort({ month: -1 })
       .limit(100)
       .toArray()
     
