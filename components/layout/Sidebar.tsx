@@ -12,7 +12,8 @@ import {
   TrendingUp,
   Menu,
   X,
-  Database
+  Database,
+  Receipt
 } from 'lucide-react';
 
 const navigation = [
@@ -20,6 +21,7 @@ const navigation = [
   { name: 'Balance Totals', href: '/dashboard/totals', icon: TrendingUp },
   { name: 'Balance Standard', href: '/dashboard/standard', icon: FileText },
   { name: 'Balance 8 Columns', href: '/dashboard/8columns', icon: Table2 },
+  { name: 'Facturas Mensuales', href: '/dashboard/invoices', icon: Receipt },
   {
     name: 'Indicadores Financieros',
     href: '/dashboard/indicadores-financieros',

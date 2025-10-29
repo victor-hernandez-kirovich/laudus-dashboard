@@ -122,30 +122,30 @@ export default function TotalsPage() {
 
         {/* Data Table - 6 COLUMNAS (solo datos de DB) */}
         <Card title='Detalle de Cuentas' subtitle={'Total: ' + data.recordCount + ' registros'}>
-          <div className='overflow-x-auto -mx-4 sm:mx-0'>
+          <div className='overflow-x-auto -mx-4 sm:mx-0 max-h-[600px] overflow-y-auto'>
             <div className='inline-block min-w-full align-middle'>
               <table className='min-w-full divide-y divide-gray-200'>
-                <thead className='bg-gray-50'>
+                <thead className='bg-gray-50 sticky top-0 z-10 shadow-sm'>
                   <tr>
-                    <th className='hidden md:table-cell px-2 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider'>
+                    <th className='hidden md:table-cell px-2 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider bg-gray-50'>
                       Código
                     </th>
-                    <th className='hidden md:table-cell px-2 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider'>
+                    <th className='hidden md:table-cell px-2 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider bg-gray-50'>
                       Nombre de Cuenta
                     </th>
-                    <th className='hidden md:table-cell px-2 py-2 text-right text-xs font-medium text-gray-500 uppercase tracking-wider'>
+                    <th className='hidden md:table-cell px-2 py-2 text-right text-xs font-medium text-gray-500 uppercase tracking-wider bg-gray-50'>
                       Debe
                     </th>
-                    <th className='hidden md:table-cell px-2 py-2 text-right text-xs font-medium text-gray-500 uppercase tracking-wider'>
+                    <th className='hidden md:table-cell px-2 py-2 text-right text-xs font-medium text-gray-500 uppercase tracking-wider bg-gray-50'>
                       Haber
                     </th>
-                    <th className='hidden md:table-cell px-2 py-2 text-right text-xs font-medium text-blue-600 uppercase tracking-wider'>
+                    <th className='hidden md:table-cell px-2 py-2 text-right text-xs font-medium text-blue-600 uppercase tracking-wider bg-gray-50'>
                       Bal. Deudor
                     </th>
-                    <th className='hidden md:table-cell px-2 py-2 text-right text-xs font-medium text-red-600 uppercase tracking-wider'>
+                    <th className='hidden md:table-cell px-2 py-2 text-right text-xs font-medium text-red-600 uppercase tracking-wider bg-gray-50'>
                       Bal. Acreedor
                     </th>
-                    <th className='md:hidden px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider'>
+                    <th className='md:hidden px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider bg-gray-50'>
                       Cuenta
                     </th>
                   </tr>

@@ -158,26 +158,26 @@ export default function BalanceStandardPage() {
 
         {/* Data Table */}
         <Card title='Datos del Balance Standard' subtitle={`Total: ${records.length} registros`}>
-          <div className='overflow-x-auto'>
+          <div className='overflow-x-auto max-h-[600px] overflow-y-auto'>
             <table className='min-w-full divide-y divide-gray-200'>
-              <thead className='bg-gray-50'>
+              <thead className='bg-gray-50 sticky top-0 z-10 shadow-sm'>
                 <tr>
-                  <th className='hidden md:table-cell px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider'>
+                  <th className='hidden md:table-cell px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider bg-gray-50'>
                     Código
                   </th>
-                  <th className='hidden md:table-cell px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider'>
+                  <th className='hidden md:table-cell px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider bg-gray-50'>
                     Nombre de Cuenta
                   </th>
-                  <th className='hidden md:table-cell px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider'>
+                  <th className='hidden md:table-cell px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider bg-gray-50'>
                     Debe
                   </th>
-                  <th className='hidden md:table-cell px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider'>
+                  <th className='hidden md:table-cell px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider bg-gray-50'>
                     Haber
                   </th>
-                  <th className='hidden md:table-cell px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider'>
+                  <th className='hidden md:table-cell px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider bg-gray-50'>
                     Balance
                   </th>
-                  <th className='md:hidden px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider'>
+                  <th className='md:hidden px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider bg-gray-50'>
                     Cuenta
                   </th>
                 </tr>
