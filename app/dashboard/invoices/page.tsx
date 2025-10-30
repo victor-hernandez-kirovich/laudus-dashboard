@@ -1,382 +1,340 @@
-'use client'
+"use client";
 
-import { useState, useEffect, Fragment } from 'react'
-import { Header } from '@/components/layout/Header'
-import { Card } from '@/components/ui/Card'
-import { formatCurrency } from '@/lib/utils'
-import { 
-  DollarSign, 
-  FileText, 
-  Calendar, 
-  TrendingUp,
-  Package,
-  ChevronDown,
-  ChevronRight,
-  BarChart3
-} from 'lucide-react'
+import { useState, useEffect } from "react";
+import { Header } from "@/components/layout/Header";
+import { Card } from "@/components/ui/Card";
+import { formatCurrency } from "@/lib/utils";
 
 interface InvoiceData {
-  month: string
-  year: number
-  monthNumber: number
-  monthName: string
-  total: number
-  returns: number
-  returnsPercentage: number
-  net: number
-  netChangeYoYPercentage: number
-  margin: number
-  marginChangeYoYPercentage: number
-  discounts: number
-  discountsPercentage: number
-  quantity: number
-  insertedAt: string
+  month: string;
+  year: number;
+  monthNumber: number;
+  monthName: string;
+  total: number;
+  returns: number;
+  returnsPercentage: number;
+  net: number;
+  netChangeYoYPercentage: number;
+  margin: number;
+  marginChangeYoYPercentage: number;
+  discounts: number;
+  discountsPercentage: number;
+  quantity: number;
+  insertedAt: string;
 }
 
 export default function InvoicesPage() {
-  const [invoices, setInvoices] = useState<InvoiceData[]>([])
-  const [selectedMonth, setSelectedMonth] = useState<string>('')
-  const [loading, setLoading] = useState(true)
-  const [error, setError] = useState<string | null>(null)
-  const [expandedMonths, setExpandedMonths] = useState<Set<string>>(new Set())
+  const [invoices, setInvoices] = useState<InvoiceData[]>([]);
+  const [selectedYear, setSelectedYear] = useState<number>(0);
+  const [selectedMonthNumber, setSelectedMonthNumber] = useState<number>(0);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
 
-  const toggleMonth = (month: string) => {
-    const newExpanded = new Set(expandedMonths)
-    if (newExpanded.has(month)) {
-      newExpanded.delete(month)
-    } else {
-      newExpanded.add(month)
-    }
-    setExpandedMonths(newExpanded)
-  }
+  // Compute available years from invoices
+  const availableYears = Array.from(
+    new Set(invoices.map((inv) => inv.year))
+  ).sort((a, b) => b - a);
+
+  // Compute available months for selected year
+  const availableMonths = invoices
+    .filter((inv) => inv.year === selectedYear)
+    .sort((a, b) => b.monthNumber - a.monthNumber);
 
   useEffect(() => {
     async function fetchData() {
       try {
-        const res = await fetch('/api/data/invoices')
-        if (!res.ok) throw new Error('Error al cargar datos')
-        const result = await res.json()
-        setInvoices(result.data)
+        const res = await fetch("/api/data/invoices");
+        if (!res.ok) throw new Error("Error al cargar datos");
+        const result = await res.json();
+        setInvoices(result.data);
         // Seleccionar el mes más reciente por defecto
         if (result.data && result.data.length > 0) {
-          setSelectedMonth(result.data[0].month)
+          const mostRecent = result.data[0];
+          setSelectedYear(mostRecent.year);
+          setSelectedMonthNumber(mostRecent.monthNumber);
         }
       } catch (err) {
-        setError(err instanceof Error ? err.message : 'Error desconocido')
+        setError(err instanceof Error ? err.message : "Error desconocido");
       } finally {
-        setLoading(false)
+        setLoading(false);
       }
     }
-    fetchData()
-  }, [])
+    fetchData();
+  }, []);
+
+  // When year changes, select the first available month
+  useEffect(() => {
+    if (selectedYear && invoices.length > 0) {
+      const monthsForYear = invoices
+        .filter((inv) => inv.year === selectedYear)
+        .sort((a, b) => b.monthNumber - a.monthNumber);
+      if (monthsForYear.length > 0 && selectedMonthNumber === 0) {
+        setSelectedMonthNumber(monthsForYear[0].monthNumber);
+      }
+    }
+  }, [selectedYear, invoices, selectedMonthNumber]);
 
   if (loading) {
     return (
       <div>
-        <Header title='Facturas Mensuales' subtitle='Reporte de ventas por mes' />
-        <div className='p-8 flex items-center justify-center'>
-          <div className='text-gray-600'>Cargando datos...</div>
+        <Header
+          title="Facturas Mensuales"
+          subtitle="Reporte de ventas por mes"
+        />
+        <div className="p-8 flex items-center justify-center">
+          <div className="text-gray-600">Cargando datos...</div>
         </div>
       </div>
-    )
+    );
   }
 
   if (error) {
     return (
       <div>
-        <Header title='Facturas Mensuales' subtitle='Reporte de ventas por mes' />
-        <div className='p-8'>
+        <Header
+          title="Facturas Mensuales"
+          subtitle="Reporte de ventas por mes"
+        />
+        <div className="p-8">
           <Card>
-            <div className='text-red-600'>Error: {error}</div>
+            <div className="text-red-600">Error: {error}</div>
           </Card>
         </div>
       </div>
-    )
+    );
   }
 
   if (!invoices || invoices.length === 0) {
     return (
       <div>
-        <Header title='Facturas Mensuales' subtitle='No hay datos disponibles' />
-        <div className='p-8 flex items-center justify-center'>
-          <div className='text-gray-500'>No se encontraron facturas</div>
+        <Header
+          title="Facturas Mensuales"
+          subtitle="No hay datos disponibles"
+        />
+        <div className="p-8 flex items-center justify-center">
+          <div className="text-gray-500">No se encontraron facturas</div>
         </div>
       </div>
-    )
+    );
   }
-
-  // Calcular totales generales
-  const totalSales = invoices.reduce((sum, inv) => sum + inv.total, 0)
-  const totalNet = invoices.reduce((sum, inv) => sum + inv.net, 0)
-  const totalQuantity = invoices.reduce((sum, inv) => sum + inv.quantity, 0)
-  const avgMonthly = totalSales / invoices.length
-  const avgMargin = invoices.reduce((sum, inv) => sum + inv.margin, 0) / invoices.length
 
   // Obtener datos del mes seleccionado
-  const selectedData = invoices.find(inv => inv.month === selectedMonth)
-
-  // Formatear nombre del mes
-  const formatMonthName = (monthStr: string) => {
-    const [year, month] = monthStr.split('-')
-    const months = [
-      'Enero', 'Febrero', 'Marzo', 'Abril', 'Mayo', 'Junio',
-      'Julio', 'Agosto', 'Septiembre', 'Octubre', 'Noviembre', 'Diciembre'
-    ]
-    return `${months[parseInt(month) - 1]} ${year}`
-  }
+  const selectedData = invoices.find(
+    (inv) => inv.year === selectedYear && inv.monthNumber === selectedMonthNumber
+  );
 
   return (
     <div>
       <Header
-        title='Facturas Mensuales'
-        subtitle='Análisis de ventas agregadas por mes - Enero a Octubre 2025'
+        title="Facturas Mensuales"
+        subtitle="Análisis de ventas agregadas por mes"
       />
 
-      <div className='p-8 space-y-8'>
-        {/* Selector de Mes */}
-        <div className='bg-white rounded-lg shadow-sm border border-gray-200'>
-          <div className='p-6'>
-            <div className='flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4'>
-              <div className='flex items-center gap-2'>
-                <Calendar className='h-5 w-5 text-blue-600' />
-                <label className='text-sm font-medium text-gray-700'>
-                  Seleccionar Mes:
+      <div className="p-8 space-y-6">
+        {/* Selector de Año y Mes */}
+        <div className="flex justify-end">
+          <div className="bg-gray-50 border-2 border-gray-300 rounded-lg p-4 inline-block shadow-sm">
+            <div className="flex items-center gap-4">
+              <div className="flex items-center gap-2">
+                <label className="text-sm font-semibold text-gray-700">
+                  Año:
                 </label>
+                <select
+                  value={selectedYear}
+                  onChange={(e) => {
+                    const newYear = Number(e.target.value);
+                    setSelectedYear(newYear);
+                    // Reset month to first available for new year
+                    const monthsForYear = invoices
+                      .filter((inv) => inv.year === newYear)
+                      .sort((a, b) => b.monthNumber - a.monthNumber);
+                    if (monthsForYear.length > 0) {
+                      setSelectedMonthNumber(monthsForYear[0].monthNumber);
+                    }
+                  }}
+                  className="px-4 py-2 border-2 border-gray-400 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 bg-white font-medium text-gray-900 hover:border-gray-500 transition-colors"
+                >
+                  {availableYears.map((year) => (
+                    <option key={year} value={year}>
+                      {year}
+                    </option>
+                  ))}
+                </select>
               </div>
-              <select
-                value={selectedMonth}
-                onChange={(e) => setSelectedMonth(e.target.value)}
-                className='px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white'
-              >
-                {invoices.map(inv => (
-                  <option key={inv.month} value={inv.month}>
-                    {formatMonthName(inv.month)}
-                  </option>
-                ))}
-              </select>
-            </div>
-            <div className='mt-2 text-xs text-gray-500'>
-              {invoices.length} meses disponibles
+
+              <div className="flex items-center gap-2">
+                <label className="text-sm font-semibold text-gray-700">
+                  Mes:
+                </label>
+                <select
+                  value={selectedMonthNumber}
+                  onChange={(e) =>
+                    setSelectedMonthNumber(Number(e.target.value))
+                  }
+                  className="px-4 py-2 border-2 border-gray-400 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 bg-white font-medium text-gray-900 hover:border-gray-500 transition-colors"
+                >
+                  {availableMonths.map((inv) => (
+                    <option key={inv.month} value={inv.monthNumber}>
+                      {inv.monthName}
+                    </option>
+                  ))}
+                </select>
+              </div>
             </div>
           </div>
         </div>
 
-        {/* Resumen General */}
-        <div>
-          <h2 className='text-lg font-semibold text-gray-900 mb-4'>Resumen General (Todos los Meses)</h2>
-          <div className='grid grid-cols-1 gap-6 md:grid-cols-4'>
-            <Card>
-              <div className='flex items-center justify-between'>
-                <div>
-                  <p className='text-sm font-medium text-gray-600'>Total Bruto</p>
-                  <p className='text-2xl font-bold text-green-600 mt-1'>
-                    {formatCurrency(totalSales)}
-                  </p>
-                </div>
-                <DollarSign className='h-8 w-8 text-green-500' />
-              </div>
-            </Card>
-
-            <Card>
-              <div className='flex items-center justify-between'>
-                <div>
-                  <p className='text-sm font-medium text-gray-600'>Total Neto</p>
-                  <p className='text-2xl font-bold text-blue-600 mt-1'>
-                    {formatCurrency(totalNet)}
-                  </p>
-                </div>
-                <FileText className='h-8 w-8 text-blue-500' />
-              </div>
-            </Card>
-
-            <Card>
-              <div className='flex items-center justify-between'>
-                <div>
-                  <p className='text-sm font-medium text-gray-600'>Cantidad Items</p>
-                  <p className='text-2xl font-bold text-purple-600 mt-1'>
-                    {totalQuantity.toLocaleString('es-CL')}
-                  </p>
-                </div>
-                <Package className='h-8 w-8 text-purple-500' />
-              </div>
-            </Card>
-
-            <Card>
-              <div className='flex items-center justify-between'>
-                <div>
-                  <p className='text-sm font-medium text-gray-600'>Margen Promedio</p>
-                  <p className='text-2xl font-bold text-orange-600 mt-1'>
-                    {avgMargin.toFixed(1)}%
-                  </p>
-                </div>
-                <BarChart3 className='h-8 w-8 text-orange-500' />
-              </div>
-            </Card>
-          </div>
-        </div>
-
-        {/* Detalle del Mes Seleccionado */}
-        {selectedData && (
+        {/* Datos del Mes Seleccionado */}
+        {selectedData ? (
           <div>
-            <h2 className='text-lg font-semibold text-gray-900 mb-4'>
-              Detalle de {formatMonthName(selectedMonth)}
+            <h2 className="text-xl font-bold text-gray-900 mb-6">
+              {selectedData.monthName} {selectedData.year}
             </h2>
-            <div className='grid grid-cols-1 gap-6 md:grid-cols-3'>
+            
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
+              {/* Total Bruto */}
               <Card>
-                <div>
-                  <p className='text-sm font-medium text-gray-600'>Ventas Brutas</p>
-                  <p className='text-3xl font-bold text-green-600 mt-2'>
+                <div className="space-y-1">
+                  <p className="text-xs font-medium text-gray-500 uppercase">
+                    Total Bruto
+                  </p>
+                  <p className="text-2xl font-bold text-green-600">
                     {formatCurrency(selectedData.total)}
                   </p>
-                  <p className='text-xs text-gray-500 mt-1'>
-                    Neto: {formatCurrency(selectedData.net)}
-                  </p>
-                  {selectedData.netChangeYoYPercentage !== 0 && (
-                    <p className='text-xs text-blue-600 mt-1'>
-                      {selectedData.netChangeYoYPercentage > 0 ? '↑' : '↓'} {Math.abs(selectedData.netChangeYoYPercentage).toFixed(1)}% vs año anterior
-                    </p>
-                  )}
                 </div>
               </Card>
 
+              {/* Devoluciones */}
               <Card>
-                <div>
-                  <p className='text-sm font-medium text-gray-600'>Margen</p>
-                  <p className='text-3xl font-bold text-purple-600 mt-2'>
-                    {selectedData.margin.toFixed(1)}%
+                <div className="space-y-1">
+                  <p className="text-xs font-medium text-gray-500 uppercase">
+                    Devoluciones
                   </p>
-                  {selectedData.marginChangeYoYPercentage !== 0 && (
-                    <p className='text-xs text-blue-600 mt-1'>
-                      {selectedData.marginChangeYoYPercentage > 0 ? '↑' : '↓'} {Math.abs(selectedData.marginChangeYoYPercentage).toFixed(1)}% vs año anterior
-                    </p>
-                  )}
-                  <p className='text-xs text-gray-500 mt-2'>
-                    Cantidad: {selectedData.quantity.toLocaleString('es-CL')}
-                  </p>
-                </div>
-              </Card>
-
-              <Card>
-                <div>
-                  <p className='text-sm font-medium text-gray-600'>Devoluciones</p>
-                  <p className='text-3xl font-bold text-red-600 mt-2'>
+                  <p className="text-2xl font-bold text-red-600">
                     {formatCurrency(selectedData.returns)}
                   </p>
-                  <p className='text-xs text-gray-500 mt-1'>
-                    {selectedData.returnsPercentage.toFixed(1)}% del total
+                </div>
+              </Card>
+
+              {/* Devoluciones Porcentaje */}
+              <Card>
+                <div className="space-y-1">
+                  <p className="text-xs font-medium text-gray-500 uppercase">
+                    Devoluciones %
                   </p>
-                  <p className='text-xs text-gray-500 mt-2'>
-                    Descuentos: {formatCurrency(selectedData.discounts)} ({selectedData.discountsPercentage.toFixed(1)}%)
+                  <p className="text-2xl font-bold text-red-500">
+                    {selectedData.returnsPercentage}%
+                  </p>
+                </div>
+              </Card>
+
+              {/* Total Neto */}
+              <Card>
+                <div className="space-y-1">
+                  <p className="text-xs font-medium text-gray-500 uppercase">
+                    Total Neto
+                  </p>
+                  <p className="text-2xl font-bold text-blue-600">
+                    {formatCurrency(selectedData.net)}
+                  </p>
+                </div>
+              </Card>
+
+              {/* Neto Cambio YoY */}
+              <Card>
+                <div className="space-y-1">
+                  <p className="text-xs font-medium text-gray-500 uppercase">
+                    Neto Cambio YoY
+                  </p>
+                  <p className={`text-2xl font-bold ${
+                    selectedData.netChangeYoYPercentage > 0 
+                      ? 'text-green-600' 
+                      : selectedData.netChangeYoYPercentage < 0 
+                      ? 'text-red-600' 
+                      : 'text-gray-600'
+                  }`}>
+                    {selectedData.netChangeYoYPercentage > 0 ? "↑" : selectedData.netChangeYoYPercentage < 0 ? "↓" : ""}{" "}
+                    {selectedData.netChangeYoYPercentage}%
+                  </p>
+                </div>
+              </Card>
+
+              {/* Margen */}
+              <Card>
+                <div className="space-y-1">
+                  <p className="text-xs font-medium text-gray-500 uppercase">
+                    Margen
+                  </p>
+                  <p className="text-2xl font-bold text-purple-600">
+                    {formatCurrency(selectedData.margin)}
+                  </p>
+                </div>
+              </Card>
+
+              {/* Margen Cambio YoY */}
+              <Card>
+                <div className="space-y-1">
+                  <p className="text-xs font-medium text-gray-500 uppercase">
+                    Margen Cambio YoY
+                  </p>
+                  <p className={`text-2xl font-bold ${
+                    selectedData.marginChangeYoYPercentage > 0 
+                      ? 'text-green-600' 
+                      : selectedData.marginChangeYoYPercentage < 0 
+                      ? 'text-red-600' 
+                      : 'text-gray-600'
+                  }`}>
+                    {selectedData.marginChangeYoYPercentage > 0 ? "↑" : selectedData.marginChangeYoYPercentage < 0 ? "↓" : ""}{" "}
+                    {selectedData.marginChangeYoYPercentage}%
+                  </p>
+                </div>
+              </Card>
+
+              {/* Descuentos */}
+              <Card>
+                <div className="space-y-1">
+                  <p className="text-xs font-medium text-gray-500 uppercase">
+                    Descuentos
+                  </p>
+                  <p className="text-2xl font-bold text-orange-600">
+                    {formatCurrency(selectedData.discounts)}
+                  </p>
+                </div>
+              </Card>
+
+              {/* Descuentos Porcentaje */}
+              <Card>
+                <div className="space-y-1">
+                  <p className="text-xs font-medium text-gray-500 uppercase">
+                    Descuentos %
+                  </p>
+                  <p className="text-2xl font-bold text-orange-500">
+                    {selectedData.discountsPercentage}%
+                  </p>
+                </div>
+              </Card>
+
+              {/* Cantidad */}
+              <Card>
+                <div className="space-y-1">
+                  <p className="text-xs font-medium text-gray-500 uppercase">
+                    Cantidad
+                  </p>
+                  <p className="text-2xl font-bold text-indigo-600">
+                    {selectedData.quantity.toLocaleString("es-CL")}
                   </p>
                 </div>
               </Card>
             </div>
           </div>
+        ) : (
+          <Card>
+            <div className="text-center py-12 text-gray-500">
+              No se encontraron datos para el mes seleccionado
+            </div>
+          </Card>
         )}
-
-        {/* Tabla Mensual Comparativa */}
-        <Card title='Comparativo Mensual' subtitle='Ventas agregadas por cada mes'>
-          <div className='overflow-x-auto max-h-[600px] overflow-y-auto'>
-            <table className='min-w-full divide-y divide-gray-200'>
-              <thead className='bg-gray-50 sticky top-0 z-10 shadow-sm'>
-                <tr>
-                  <th className='px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider bg-gray-50'>
-                    Mes
-                  </th>
-                  <th className='px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider bg-gray-50'>
-                    Total Bruto
-                  </th>
-                  <th className='px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider bg-gray-50'>
-                    Total Neto
-                  </th>
-                  <th className='px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider bg-gray-50'>
-                    Margen %
-                  </th>
-                  <th className='px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider bg-gray-50'>
-                    Cantidad
-                  </th>
-                  <th className='px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider bg-gray-50'>
-                    Devoluciones
-                  </th>
-                  <th className='px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider bg-gray-50'>
-                    Detalle
-                  </th>
-                </tr>
-              </thead>
-              <tbody className='bg-white divide-y divide-gray-200'>
-                {invoices.map((invoice) => (
-                  <Fragment key={invoice.month}>
-                    <tr className='hover:bg-gray-50'>
-                      <td className='px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900'>
-                        {formatMonthName(invoice.month)}
-                      </td>
-                      <td className='px-6 py-4 whitespace-nowrap text-sm text-right font-semibold text-green-700'>
-                        {formatCurrency(invoice.total)}
-                      </td>
-                      <td className='px-6 py-4 whitespace-nowrap text-sm text-right font-semibold text-blue-700'>
-                        {formatCurrency(invoice.net)}
-                      </td>
-                      <td className='px-6 py-4 whitespace-nowrap text-sm text-right text-purple-700 font-medium'>
-                        {invoice.margin.toFixed(1)}%
-                      </td>
-                      <td className='px-6 py-4 whitespace-nowrap text-sm text-right text-gray-900'>
-                        {invoice.quantity.toLocaleString('es-CL')}
-                      </td>
-                      <td className='px-6 py-4 whitespace-nowrap text-sm text-right text-red-700'>
-                        {formatCurrency(invoice.returns)}
-                      </td>
-                      <td className='px-6 py-4 whitespace-nowrap text-sm text-center'>
-                        <button
-                          onClick={() => toggleMonth(invoice.month)}
-                          className='text-blue-600 hover:text-blue-800'
-                        >
-                          {expandedMonths.has(invoice.month) ? (
-                            <ChevronDown className='h-5 w-5 inline' />
-                          ) : (
-                            <ChevronRight className='h-5 w-5 inline' />
-                          )}
-                        </button>
-                      </td>
-                    </tr>
-                    {expandedMonths.has(invoice.month) && (
-                      <tr className='bg-gray-50'>
-                        <td colSpan={7} className='px-6 py-4'>
-                          <div className='grid grid-cols-2 md:grid-cols-4 gap-4 text-sm'>
-                            <div>
-                              <span className='text-gray-600 font-medium'>Descuentos:</span>
-                              <div className='text-orange-700 font-semibold'>
-                                {formatCurrency(invoice.discounts)} ({invoice.discountsPercentage.toFixed(1)}%)
-                              </div>
-                            </div>
-                            <div>
-                              <span className='text-gray-600 font-medium'>% Devoluciones:</span>
-                              <div className='text-red-700 font-semibold'>
-                                {invoice.returnsPercentage.toFixed(1)}%
-                              </div>
-                            </div>
-                            <div>
-                              <span className='text-gray-600 font-medium'>Cambio Neto YoY:</span>
-                              <div className={`font-semibold ${invoice.netChangeYoYPercentage >= 0 ? 'text-green-700' : 'text-red-700'}`}>
-                                {invoice.netChangeYoYPercentage >= 0 ? '↑' : '↓'} {Math.abs(invoice.netChangeYoYPercentage).toFixed(1)}%
-                              </div>
-                            </div>
-                            <div>
-                              <span className='text-gray-600 font-medium'>Cambio Margen YoY:</span>
-                              <div className={`font-semibold ${invoice.marginChangeYoYPercentage >= 0 ? 'text-green-700' : 'text-red-700'}`}>
-                                {invoice.marginChangeYoYPercentage >= 0 ? '↑' : '↓'} {Math.abs(invoice.marginChangeYoYPercentage).toFixed(1)}%
-                              </div>
-                            </div>
-                          </div>
-                        </td>
-                      </tr>
-                    )}
-                  </Fragment>
-                ))}
-              </tbody>
-            </table>
-          </div>
-        </Card>
       </div>
     </div>
-  )
+  );
 }

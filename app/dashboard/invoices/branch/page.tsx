@@ -1,9 +1,10 @@
 'use client'
 
-import { useState, useEffect, Fragment } from 'react'
+import { useState, useEffect } from 'react'
 import { Card } from '@/components/ui/Card'
 import { formatCurrency } from '@/lib/utils'
-import { Building2, TrendingUp, TrendingDown, DollarSign, Percent, Tag, ChevronDown, ChevronUp, Calendar } from 'lucide-react'
+import { Building2, TrendingUp, DollarSign, Tag } from 'lucide-react'
+import { Header } from '@/components/layout/Header'
 
 interface BranchData {
   branch: string
@@ -34,9 +35,9 @@ interface InvoicesByBranchData {
 
 export default function InvoicesByBranchPage() {
   const [allData, setAllData] = useState<InvoicesByBranchData[]>([])
-  const [selectedMonth, setSelectedMonth] = useState<string>('')
+  const [selectedYear, setSelectedYear] = useState<number>(0)
+  const [selectedMonthNumber, setSelectedMonthNumber] = useState<number>(0)
   const [loading, setLoading] = useState(true)
-  const [expandedBranch, setExpandedBranch] = useState<string | null>(null)
 
   useEffect(() => {
     fetchData()
@@ -51,7 +52,8 @@ export default function InvoicesByBranchPage() {
       if (result.success && result.data.length > 0) {
         setAllData(result.data)
         // Select the most recent month by default
-        setSelectedMonth(result.data[0].month)
+        setSelectedYear(result.data[0].year)
+        setSelectedMonthNumber(result.data[0].monthNumber)
       }
     } catch (error) {
       console.error('Error fetching invoices by branch:', error)
@@ -60,20 +62,16 @@ export default function InvoicesByBranchPage() {
     }
   }
 
-  const data = allData.find(d => d.month === selectedMonth)
-
-  const toggleBranch = (branchName: string) => {
-    setExpandedBranch(expandedBranch === branchName ? null : branchName)
-  }
-
-  const formatDate = (dateStr: string) => {
-    const date = new Date(dateStr)
-    return date.toLocaleDateString('es-CL', { 
-      year: 'numeric', 
-      month: 'long', 
-      day: 'numeric' 
-    })
-  }
+  // Get unique years for year selector
+  const availableYears = Array.from(new Set(allData.map(d => d.year))).sort((a, b) => b - a)
+  
+  // Get months available for selected year
+  const availableMonths = allData
+    .filter(d => d.year === selectedYear)
+    .sort((a, b) => b.monthNumber - a.monthNumber)
+  
+  // Find current data based on year and month
+  const data = allData.find(d => d.year === selectedYear && d.monthNumber === selectedMonthNumber)
 
   if (loading) {
     return (
@@ -115,42 +113,59 @@ export default function InvoicesByBranchPage() {
     )
   }
 
+
   // Sort branches by net sales descending
   const sortedBranches = [...data.branches].sort((a, b) => b.net - a.net)
 
   return (
-    <div className="p-6 space-y-6">
-      {/* Header with Month Selector */}
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-2xl font-bold text-gray-900">Facturas por Sucursal</h1>
-          <p className="mt-1 text-sm text-gray-500">
-            Análisis de ventas por sucursal
-          </p>
-        </div>
-        
-        {/* Month Selector */}
-        <div className="flex items-center gap-2">
-          <Calendar className="h-5 w-5 text-gray-400" />
+    <div>
+      <Header
+        title="Facturas por Sucursal"
+        subtitle="Análisis de ventas por sucursal"
+      />
+
+      <div className="p-8 space-y-8">
+        {/* Year and Month Selector */}
+        <div className="flex justify-end">
+        <div className="bg-gray-50 border border-gray-200 rounded-lg p-4 inline-block">
+          <div className="flex items-center gap-3">
+            <span className="text-sm font-medium text-gray-700">Seleccionar:</span>
+          
+          {/* Year Selector */}
           <select
-            value={selectedMonth}
-            onChange={(e) => setSelectedMonth(e.target.value)}
-            className="block w-48 rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm"
+            value={selectedYear}
+            onChange={(e) => {
+              const newYear = Number(e.target.value)
+              setSelectedYear(newYear)
+              // Set to first available month of new year
+              const firstMonth = allData.find(d => d.year === newYear)
+              if (firstMonth) {
+                setSelectedMonthNumber(firstMonth.monthNumber)
+              }
+            }}
+            className="block w-32 rounded-md border-2 border-gray-400 bg-white shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm px-3 py-2 font-medium text-gray-900"
           >
-            {allData.map((item) => (
-              <option key={item.month} value={item.month}>
-                {item.monthName} {item.year}
+            {availableYears.map((year) => (
+              <option key={year} value={year}>
+                {year} 
+              </option>
+            ))}
+          </select>
+          
+          {/* Month Selector */}
+          <select
+            value={selectedMonthNumber}
+            onChange={(e) => setSelectedMonthNumber(Number(e.target.value))}
+            className="block w-40 rounded-md border-2 border-gray-400 bg-white shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm px-3 py-2 font-medium text-gray-900"
+          >
+            {availableMonths.map((item) => (
+              <option key={item.monthNumber} value={item.monthNumber}>
+                {item.monthName.charAt(0).toUpperCase() + item.monthName.slice(1)} 
               </option>
             ))}
           </select>
         </div>
       </div>
-
-      {/* Period Info */}
-      <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
-        <p className="text-sm text-blue-800">
-          <strong>Período:</strong> {formatDate(data.startDate)} - {formatDate(data.endDate)}
-        </p>
       </div>
 
       {/* Summary Cards */}
@@ -248,172 +263,50 @@ export default function InvoicesByBranchPage() {
                 <th scope="col" className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
                   % Descuento
                 </th>
-                <th scope="col" className="px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Detalles
-                </th>
               </tr>
             </thead>
             <tbody className="bg-white divide-y divide-gray-200">
               {sortedBranches.map((branch) => (
-                <Fragment key={branch.branch}>
-                  <tr className="hover:bg-gray-50">
-                    <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
-                      {branch.branch}
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900 text-right font-semibold">
-                      {formatCurrency(branch.net)}
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900 text-right">
-                      <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800">
-                        {branch.netPercentage.toFixed(2)}%
-                      </span>
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900 text-right">
-                      {formatCurrency(branch.margin)}
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900 text-right">
-                      <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
-                        branch.marginPercentage >= 20 
-                          ? 'bg-green-100 text-green-800' 
-                          : branch.marginPercentage >= 10
-                          ? 'bg-yellow-100 text-yellow-800'
-                          : 'bg-red-100 text-red-800'
-                      }`}>
-                        {branch.marginPercentage.toFixed(2)}%
-                      </span>
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900 text-right">
-                      {formatCurrency(branch.discounts)}
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900 text-right">
-                      <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-orange-100 text-orange-800">
-                        {branch.discountsPercentage.toFixed(2)}%
-                      </span>
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-center">
-                      <button
-                        onClick={() => toggleBranch(branch.branch)}
-                        className="text-blue-600 hover:text-blue-800"
-                      >
-                        {expandedBranch === branch.branch ? (
-                          <ChevronUp className="h-5 w-5" />
-                        ) : (
-                          <ChevronDown className="h-5 w-5" />
-                        )}
-                      </button>
-                    </td>
-                  </tr>
-                  {expandedBranch === branch.branch && (
-                    <tr>
-                      <td colSpan={8} className="px-6 py-4 bg-gray-50">
-                        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                          <Card>
-                            <div className="flex items-center justify-between">
-                              <div>
-                                <p className="text-xs font-medium text-gray-600">Ventas Netas</p>
-                                <p className="text-lg font-bold text-blue-900 mt-1">
-                                  {formatCurrency(branch.net)}
-                                </p>
-                                <p className="text-xs text-gray-500 mt-1">
-                                  {branch.netPercentage.toFixed(2)}% del total
-                                </p>
-                              </div>
-                              <DollarSign className="h-8 w-8 text-blue-600" />
-                            </div>
-                          </Card>
-
-                          <Card>
-                            <div className="flex items-center justify-between">
-                              <div>
-                                <p className="text-xs font-medium text-gray-600">Margen</p>
-                                <p className="text-lg font-bold text-green-900 mt-1">
-                                  {formatCurrency(branch.margin)}
-                                </p>
-                                <p className="text-xs text-gray-500 mt-1">
-                                  {branch.marginPercentage.toFixed(2)}% de las ventas
-                                </p>
-                              </div>
-                              <TrendingUp className="h-8 w-8 text-green-600" />
-                            </div>
-                          </Card>
-
-                          <Card>
-                            <div className="flex items-center justify-between">
-                              <div>
-                                <p className="text-xs font-medium text-gray-600">Descuentos</p>
-                                <p className="text-lg font-bold text-orange-900 mt-1">
-                                  {formatCurrency(branch.discounts)}
-                                </p>
-                                <p className="text-xs text-gray-500 mt-1">
-                                  {branch.discountsPercentage.toFixed(2)}% de las ventas
-                                </p>
-                              </div>
-                              <Tag className="h-8 w-8 text-orange-600" />
-                            </div>
-                          </Card>
-                        </div>
-                      </td>
-                    </tr>
-                  )}
-                </Fragment>
+                <tr key={branch.branch} className="hover:bg-gray-50">
+                  <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
+                    {branch.branch}
+                  </td>
+                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900 text-right font-semibold">
+                    {formatCurrency(branch.net)}
+                  </td>
+                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900 text-right">
+                    <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800">
+                      {branch.netPercentage.toFixed(2)}%
+                    </span>
+                  </td>
+                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900 text-right">
+                    {formatCurrency(branch.margin)}
+                  </td>
+                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900 text-right">
+                    <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
+                      branch.marginPercentage >= 20 
+                        ? 'bg-green-100 text-green-800' 
+                        : branch.marginPercentage >= 10
+                        ? 'bg-yellow-100 text-yellow-800'
+                        : 'bg-red-100 text-red-800'
+                    }`}>
+                      {branch.marginPercentage.toFixed(2)}%
+                    </span>
+                  </td>
+                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900 text-right">
+                    {formatCurrency(branch.discounts)}
+                  </td>
+                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900 text-right">
+                    <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-orange-100 text-orange-800">
+                      {branch.discountsPercentage.toFixed(2)}%
+                    </span>
+                  </td>
+                </tr>
               ))}
             </tbody>
           </table>
         </div>
       </Card>
-
-      {/* Performance Analysis */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        <Card>
-          <div className="px-6 py-4 border-b border-gray-200">
-            <h2 className="text-lg font-semibold text-gray-900">Top 5 Sucursales por Ventas</h2>
-          </div>
-          <div className="p-6">
-            <div className="space-y-4">
-              {sortedBranches.slice(0, 5).map((branch, index) => (
-                <div key={branch.branch} className="flex items-center justify-between">
-                  <div className="flex items-center space-x-3">
-                    <span className="flex items-center justify-center w-8 h-8 rounded-full bg-blue-100 text-blue-800 font-semibold text-sm">
-                      {index + 1}
-                    </span>
-                    <span className="font-medium text-gray-900">{branch.branch}</span>
-                  </div>
-                  <div className="text-right">
-                    <p className="font-semibold text-gray-900">{formatCurrency(branch.net)}</p>
-                    <p className="text-xs text-gray-500">{branch.netPercentage.toFixed(2)}%</p>
-                  </div>
-                </div>
-              ))}
-            </div>
-          </div>
-        </Card>
-
-        <Card>
-          <div className="px-6 py-4 border-b border-gray-200">
-            <h2 className="text-lg font-semibold text-gray-900">Top 5 Sucursales por Margen %</h2>
-          </div>
-          <div className="p-6">
-            <div className="space-y-4">
-              {[...sortedBranches]
-                .sort((a, b) => b.marginPercentage - a.marginPercentage)
-                .slice(0, 5)
-                .map((branch, index) => (
-                  <div key={branch.branch} className="flex items-center justify-between">
-                    <div className="flex items-center space-x-3">
-                      <span className="flex items-center justify-center w-8 h-8 rounded-full bg-green-100 text-green-800 font-semibold text-sm">
-                        {index + 1}
-                      </span>
-                      <span className="font-medium text-gray-900">{branch.branch}</span>
-                    </div>
-                    <div className="text-right">
-                      <p className="font-semibold text-gray-900">{branch.marginPercentage.toFixed(2)}%</p>
-                      <p className="text-xs text-gray-500">{formatCurrency(branch.margin)}</p>
-                    </div>
-                  </div>
-                ))}
-            </div>
-          </div>
-        </Card>
       </div>
     </div>
   )
