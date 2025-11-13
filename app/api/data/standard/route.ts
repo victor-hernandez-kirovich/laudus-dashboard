@@ -17,7 +17,6 @@ export async function GET(request: Request) {
     const data = await collection
       .find(query)
       .sort({ date: -1 })
-      .limit(30)
       .toArray();
     
     return NextResponse.json({
