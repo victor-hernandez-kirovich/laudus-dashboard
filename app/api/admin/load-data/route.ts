@@ -2,6 +2,8 @@ import { NextRequest, NextResponse } from 'next/server'
 import { exec, spawn } from 'child_process'
 import { promisify } from 'util'
 import path from 'path'
+import clientPromise from '@/lib/mongodb'
+import { LoadDataJobStatus } from '@/lib/types'
 
 const execPromise = promisify(exec)
 
@@ -22,7 +24,7 @@ interface LoadDataResponse {
 }
 
 // Execute Python script locally in background
-async function executeLocalPythonAsync(date: string, endpoints: string[]): Promise<NextResponse> {
+async function executeLocalPythonAsync(date: string, endpoints: string[], jobId: string): Promise<NextResponse> {
   try {
     // Path to Python script in laudus-api repo (sibling directory)
     const apiPath = path.join(process.cwd(), '..', 'laudus-api')
@@ -43,6 +45,7 @@ async function executeLocalPythonAsync(date: string, endpoints: string[]): Promi
     console.log('[INFO] Starting Python script in background...')
     console.log('[INFO] Script:', scriptPath)
     console.log('[INFO] Date:', date, 'Endpoints:', mappedEndpoints)
+    console.log('[INFO] Job ID:', jobId)
     
     // Execute Python in background using spawn (no esperar)
     const pythonProcess = spawn('python', [
@@ -64,6 +67,7 @@ async function executeLocalPythonAsync(date: string, endpoints: string[]): Promi
     return NextResponse.json({
       success: true,
       mode: 'local-execution-async',
+      jobId,
       message: 'Python script started in background',
       details: {
         date,
@@ -180,13 +184,47 @@ export async function POST(request: NextRequest) {
       )
     }
 
+    // Generar un jobId único
+    const jobId = `job_${date}_${Date.now()}_${Math.random().toString(36).substring(7)}`
+    
+    // Conectar a MongoDB y crear el registro inicial del job
+    const client = await clientPromise
+    const db = client.db('laudus_data')
+    const collection = db.collection<LoadDataJobStatus>('load_data_status')
+
+    const jobStatus: LoadDataJobStatus = {
+      jobId,
+      date,
+      endpoints,
+      status: 'pending',
+      mode: 'github-actions', // Se actualizará según el modo real
+      startedAt: new Date().toISOString(),
+      results: endpoints.map(endpoint => ({
+        endpoint,
+        status: 'pending'
+      })),
+      logs: [
+        `[${new Date().toLocaleTimeString('es-CL')}] 📅 Iniciando carga de datos para ${date}`,
+        `[${new Date().toLocaleTimeString('es-CL')}] 📊 Endpoints seleccionados: ${endpoints.join(', ')}`
+      ]
+    }
+
     // Validar que tenemos el token de GitHub
     const githubToken = process.env.GITHUB_TOKEN
     
     // Si no hay GitHub token, ejecutar localmente en segundo plano
     if (!githubToken) {
       console.log('[INFO] No GitHub token found, executing Python script locally in background')
-      return await executeLocalPythonAsync(date, endpoints)
+      
+      jobStatus.mode = 'local-execution-async'
+      jobStatus.status = 'running'
+      jobStatus.logs.push(`[${new Date().toLocaleTimeString('es-CL')}] 🔐 Ejecutando localmente en segundo plano`)
+      
+      // Guardar job status en MongoDB
+      await collection.insertOne(jobStatus)
+      
+      const response = await executeLocalPythonAsync(date, endpoints, jobId)
+      return response
     }
     
     console.log('[INFO] GitHub token found, triggering GitHub Actions workflow')
@@ -236,17 +274,47 @@ export async function POST(request: NextRequest) {
     if (!workflowResponse.ok) {
       const errorText = await workflowResponse.text()
       console.error('[DEBUG] GitHub API error:', errorText)
+      
+      // Actualizar job con error
+      await collection.updateOne(
+        { jobId },
+        {
+          $set: {
+            status: 'failed',
+            error: `Failed to trigger GitHub Actions: ${workflowResponse.status}`,
+            completedAt: new Date().toISOString()
+          },
+          $push: {
+            logs: `[${new Date().toLocaleTimeString('es-CL')}] ❌ Error: ${errorText}`
+          } as any
+        }
+      )
+      
       throw new Error(`Failed to trigger GitHub Actions: ${workflowResponse.status} ${errorText}`)
     }
 
     console.log('[DEBUG] GitHub Actions workflow triggered successfully')
 
+    // Actualizar job status con información de GitHub Actions
+    jobStatus.mode = 'github-actions'
+    jobStatus.status = 'running'
+    jobStatus.actionUrl = 'https://github.com/victor-hernandez-kirovich/laudus-api/actions'
+    jobStatus.workflowName = 'Laudus Manual'
+    jobStatus.logs.push(
+      `[${new Date().toLocaleTimeString('es-CL')}] ✅ Workflow de GitHub Actions disparado exitosamente`,
+      `[${new Date().toLocaleTimeString('es-CL')}] 🔗 Ver progreso: ${jobStatus.actionUrl}`
+    )
+    
+    // Guardar en MongoDB
+    await collection.insertOne(jobStatus)
+
     return NextResponse.json({
       success: true,
+      jobId,
       message: 'GitHub Actions workflow triggered successfully',
       mode: 'github-actions',
-      actionUrl: 'https://github.com/victor-hernandez-kirovich/laudus-api/actions',
-      workflowName: 'Laudus Manual',
+      actionUrl: jobStatus.actionUrl,
+      workflowName: jobStatus.workflowName,
       details: {
         date,
         endpoints,
@@ -265,3 +333,4 @@ export async function POST(request: NextRequest) {
     )
   }
 }
+

@@ -60,3 +60,31 @@ export interface InvoicesBySalesmanData {
   averageTicket: number;
   insertedAt: string;
 }
+
+export interface LoadDataJobStatus {
+  _id?: string;
+  jobId: string;
+  date: string;
+  endpoints: string[];
+  status: 'pending' | 'running' | 'completed' | 'failed' | 'timeout';
+  mode: 'github-actions' | 'local-execution' | 'local-execution-async';
+  startedAt: string;
+  completedAt?: string;
+  results: {
+    endpoint: string;
+    status: 'pending' | 'success' | 'error';
+    records?: number;
+    error?: string;
+    detectedAt?: string;
+  }[];
+  logs: string[];
+  actionUrl?: string;
+  workflowName?: string;
+  error?: string;
+}
+
+export interface LoadDataJobStatusResponse {
+  success: boolean;
+  job?: LoadDataJobStatus;
+  error?: string;
+}

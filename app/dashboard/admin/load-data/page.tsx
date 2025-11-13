@@ -4,6 +4,7 @@ import { useState, useEffect } from 'react'
 import { Header } from '@/components/layout/Header'
 import { Card } from '@/components/ui/Card'
 import { Calendar, Database, Download, CheckCircle, XCircle, Clock, AlertCircle } from 'lucide-react'
+import { LoadDataJobStatus } from '@/lib/types'
 
 interface EndpointStatus {
   name: string
@@ -17,7 +18,7 @@ interface EndpointStatus {
 interface PersistedState {
   selectedDate: string
   endpoints: EndpointStatus[]
-  logs: string[]
+  activeJobId?: string
   lastUpdated: string
 }
 
@@ -83,6 +84,7 @@ export default function LoadDataPage() {
   const [logs, setLogs] = useState<string[]>([])
   const [isPolling, setIsPolling] = useState(false)
   const [pollingTimer, setPollingTimer] = useState<NodeJS.Timeout | null>(null)
+  const [activeJobId, setActiveJobId] = useState<string | null>(null)
 
   // Limpiar timer de polling al desmontar
   useEffect(() => {
@@ -105,11 +107,72 @@ export default function LoadDataPage() {
       if (persisted.endpoints) {
         setEndpoints(persisted.endpoints)
       }
-      if (persisted.logs) {
-        setLogs(persisted.logs)
+      // Si hay un jobId activo, restaurar el polling
+      if (persisted.activeJobId) {
+        setActiveJobId(persisted.activeJobId)
+        // Intentar recuperar el job desde MongoDB
+        fetchJobStatusAndResume(persisted.activeJobId)
       }
     }
   }, [])
+
+  // Función para recuperar el estado del job desde MongoDB y reanudar polling
+  const fetchJobStatusAndResume = async (jobId: string) => {
+    try {
+      const response = await fetch(`/api/admin/load-data-status?jobId=${jobId}`)
+      if (!response.ok) {
+        console.error('Job not found or error fetching:', jobId)
+        setActiveJobId(null)
+        return
+      }
+
+      const data = await response.json()
+      const job: LoadDataJobStatus = data.job
+
+      if (!job) {
+        setActiveJobId(null)
+        return
+      }
+
+      // Restaurar logs
+      setLogs(job.logs || [])
+
+      // Restaurar estados de endpoints
+      setEndpoints(prev => prev.map(e => {
+        const jobResult = job.results.find(r => r.endpoint === e.name)
+        if (jobResult) {
+          return {
+            ...e,
+            status: jobResult.status === 'success' ? 'success' : 
+                    jobResult.status === 'error' ? 'error' :
+                    'loading',
+            records: jobResult.records,
+            error: jobResult.error
+          }
+        }
+        return e
+      }))
+
+      // Si el job no está completado, reanudar polling
+      if (job.status === 'running' || job.status === 'pending') {
+        addLog('🔄 Reanudando monitoreo del proceso...')
+        const enabledEndpoints = endpoints.filter(e => 
+          job.endpoints.includes(e.name)
+        )
+        startPollingForJob(jobId, job.date, enabledEndpoints)
+      } else if (job.status === 'completed') {
+        addLog('✅ Proceso completado anteriormente')
+        setActiveJobId(null)
+      } else if (job.status === 'failed' || job.status === 'timeout') {
+        addLog(`⚠️ Proceso anterior ${job.status === 'failed' ? 'falló' : 'expiró'}`)
+        setActiveJobId(null)
+      }
+
+    } catch (error) {
+      console.error('Error fetching job status:', error)
+      setActiveJobId(null)
+    }
+  }
 
   // Efecto para persistir estado cuando cambia (solo después de montar)
   useEffect(() => {
@@ -117,16 +180,26 @@ export default function LoadDataPage() {
     
     // No guardar si está en proceso de carga o polling
     // Solo guardar estados finales (success, error, pending sin carga activa)
-    if (isLoading || isPolling) return
+    if (isLoading || isPolling) {
+      // Guardar el activeJobId durante polling
+      const state: PersistedState = {
+        selectedDate,
+        endpoints,
+        activeJobId: activeJobId || undefined,
+        lastUpdated: new Date().toISOString()
+      }
+      savePersistedState(state)
+      return
+    }
     
     const state: PersistedState = {
       selectedDate,
       endpoints,
-      logs,
+      activeJobId: activeJobId || undefined,
       lastUpdated: new Date().toISOString()
     }
     savePersistedState(state)
-  }, [selectedDate, endpoints, logs, isMounted, isLoading, isPolling])
+  }, [selectedDate, endpoints, activeJobId, isMounted, isLoading, isPolling])
 
   const addLog = (message: string) => {
     const timestamp = new Date().toLocaleTimeString('es-CL')
@@ -152,22 +225,46 @@ export default function LoadDataPage() {
       setPollingTimer(null)
     }
     setIsPolling(false)
+    setActiveJobId(null)
   }
 
-  const startPolling = async (date: string, enabledEndpointsList: EndpointStatus[]) => {
+  const startPollingForJob = async (jobId: string, date: string, enabledEndpointsList: EndpointStatus[]) => {
     setIsPolling(true)
+    setIsLoading(true)
     addLog('🔄 Iniciando monitoreo del proceso...')
     addLog('⏱️ Consultando estado cada 15 segundos...')
 
     let pollCount = 0
     const maxPolls = 40 // Máximo 10 minutos (40 * 15s)
-    const detectedEndpoints = new Set<string>() // Para evitar logs duplicados
     
     const timer = setInterval(async () => {
       pollCount++
       
       try {
-        // Verificar cada endpoint habilitado
+        // Obtener el estado del job desde MongoDB
+        const jobResponse = await fetch(`/api/admin/load-data-status?jobId=${jobId}`)
+        
+        if (!jobResponse.ok) {
+          console.error('Error fetching job status')
+          return
+        }
+
+        const jobData = await jobResponse.json()
+        const job: LoadDataJobStatus = jobData.job
+
+        if (!job) {
+          addLog('❌ No se pudo obtener el estado del trabajo')
+          stopPolling()
+          setIsLoading(false)
+          return
+        }
+
+        // Actualizar logs desde MongoDB
+        if (job.logs && job.logs.length > logs.length) {
+          setLogs(job.logs)
+        }
+
+        // Verificar cada endpoint en las APIs de datos
         const endpointChecks = await Promise.all(
           enabledEndpointsList.map(async (endpoint) => {
             const endpointMap: { [key: string]: string } = {
@@ -198,8 +295,27 @@ export default function LoadDataPage() {
         const allFound = endpointChecks.every(check => check.found)
         const someFound = endpointChecks.some(check => check.found)
         
+        // Actualizar estado de endpoints en MongoDB
         if (someFound) {
-          // Actualizar estado de endpoints que ya tienen datos
+          const updatedResults = endpointChecks.map(check => ({
+            endpoint: check.name,
+            status: check.found ? 'success' : 'pending' as 'success' | 'pending',
+            records: check.found ? check.count : undefined,
+            detectedAt: check.found ? new Date().toISOString() : undefined
+          }))
+
+          // Actualizar en MongoDB
+          await fetch('/api/admin/load-data-status', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              jobId,
+              results: updatedResults,
+              status: allFound ? 'completed' : 'running'
+            })
+          })
+
+          // Actualizar estado local
           setEndpoints(prev => prev.map(e => {
             const check = endpointChecks.find(c => c.name === e.name)
             if (check && check.found) {
@@ -212,12 +328,12 @@ export default function LoadDataPage() {
             return e
           }))
           
-          // Mostrar progreso (evitar duplicados con Set)
-          const foundEndpoints = endpointChecks.filter(c => c.found)
-          foundEndpoints.forEach(check => {
-            if (!detectedEndpoints.has(check.name)) {
-              detectedEndpoints.add(check.name)
-              addLog(`✅ ${check.name}: ${check.count} registros detectados`)
+          // Mostrar progreso
+          const newlyFound = endpointChecks.filter(c => c.found)
+          newlyFound.forEach(check => {
+            const logMessage = `✅ ${check.name}: ${check.count} registros detectados`
+            if (!logs.some(log => log.includes(logMessage))) {
+              addLog(logMessage)
             }
           })
         }
@@ -230,6 +346,17 @@ export default function LoadDataPage() {
           const totalRecords = endpointChecks.reduce((sum, check) => sum + check.count, 0)
           addLog(`📊 Total: ${totalRecords} registros guardados`)
           addLog('🎉 ¡Proceso completado exitosamente!')
+
+          // Actualizar job a completado en MongoDB
+          await fetch('/api/admin/load-data-status', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              jobId,
+              status: 'completed',
+              completedAt: new Date().toISOString()
+            })
+          })
           
           stopPolling()
           setIsLoading(false)
@@ -254,6 +381,17 @@ export default function LoadDataPage() {
           if (foundCount > 0) {
             addLog(`✅ Se completaron ${foundCount} de ${endpointChecks.length} endpoints`)
           }
+
+          // Actualizar job a timeout en MongoDB
+          await fetch('/api/admin/load-data-status', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              jobId,
+              status: 'timeout',
+              completedAt: new Date().toISOString()
+            })
+          })
           
           stopPolling()
           setIsLoading(false)
@@ -331,6 +469,10 @@ export default function LoadDataPage() {
         throw new Error(result.error || 'Error al cargar datos')
       }
 
+      // Guardar el jobId
+      const jobId = result.jobId
+      setActiveJobId(jobId)
+
       // Verificar el modo de ejecución
       if (result.mode === 'github-actions') {
         // Modo GitHub Actions - Mostrar enlace y empezar polling
@@ -344,7 +486,7 @@ export default function LoadDataPage() {
         addLog('')
         
         // Iniciar polling para detectar cuando termina
-        startPolling(selectedDate, enabledEndpoints)
+        startPollingForJob(jobId, selectedDate, enabledEndpoints)
         
       } else if (result.mode === 'local-execution-async') {
         // Modo local async - Ejecutando en segundo plano
@@ -357,7 +499,7 @@ export default function LoadDataPage() {
         addLog('')
         
         // Iniciar polling para detectar cuando termina
-        startPolling(selectedDate, enabledEndpoints)
+        startPollingForJob(jobId, selectedDate, enabledEndpoints)
         
       } else if (result.mode === 'local-execution') {
         // Modo local - Mostrar resultados inmediatamente
