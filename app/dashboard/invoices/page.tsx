@@ -133,10 +133,10 @@ export default function InvoicesPage() {
       <div className="p-8 space-y-6">
         {/* Selector de Año y Mes */}
         <div className="flex justify-end">
-          <div className="bg-gray-50 border-2 border-gray-300 rounded-lg p-4 inline-block shadow-sm">
+          <div className="bg-gray-50 border rounded-lg p-4 inline-block">
             <div className="flex items-center gap-4">
               <div className="flex items-center gap-2">
-                <label className="text-sm font-semibold text-gray-700">
+                <label className="text-sm font-medium text-gray-700">
                   Año:
                 </label>
                 <select
@@ -152,7 +152,7 @@ export default function InvoicesPage() {
                       setSelectedMonthNumber(monthsForYear[0].monthNumber);
                     }
                   }}
-                  className="px-4 py-2 border-2 border-gray-400 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 bg-white font-medium text-gray-900 hover:border-gray-500 transition-colors"
+                  className="px-4 py-2 border-2 border-gray-400 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white font-medium text-gray-900"
                 >
                   {availableYears.map((year) => (
                     <option key={year} value={year}>
@@ -163,7 +163,7 @@ export default function InvoicesPage() {
               </div>
 
               <div className="flex items-center gap-2">
-                <label className="text-sm font-semibold text-gray-700">
+                <label className="text-sm font-medium text-gray-700">
                   Mes:
                 </label>
                 <select
@@ -171,7 +171,7 @@ export default function InvoicesPage() {
                   onChange={(e) =>
                     setSelectedMonthNumber(Number(e.target.value))
                   }
-                  className="px-4 py-2 border-2 border-gray-400 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 bg-white font-medium text-gray-900 hover:border-gray-500 transition-colors"
+                  className="px-4 py-2 border-2 border-gray-400 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white font-medium text-gray-900"
                 >
                   {availableMonths.map((inv) => (
                     <option key={inv.month} value={inv.monthNumber}>
