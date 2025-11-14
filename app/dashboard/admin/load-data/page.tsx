@@ -19,6 +19,7 @@ interface PersistedState {
   selectedDate: string
   endpoints: EndpointStatus[]
   activeJobId?: string
+  logs: string[]
   lastUpdated: string
 }
 
@@ -107,9 +108,15 @@ export default function LoadDataPage() {
       if (persisted.endpoints) {
         setEndpoints(persisted.endpoints)
       }
+      // Restaurar logs desde localStorage
+      if (persisted.logs && persisted.logs.length > 0) {
+        setLogs(persisted.logs)
+      }
       // Si hay un jobId activo, restaurar el polling
       if (persisted.activeJobId) {
         setActiveJobId(persisted.activeJobId)
+        // Mostrar mensaje de carga mientras se recuperan logs desde MongoDB
+        addLog('🔄 Recuperando estado del proceso desde el servidor...')
         // Intentar recuperar el job desde MongoDB
         fetchJobStatusAndResume(persisted.activeJobId)
       }
@@ -122,6 +129,7 @@ export default function LoadDataPage() {
       const response = await fetch(`/api/admin/load-data-status?jobId=${jobId}`)
       if (!response.ok) {
         console.error('Job not found or error fetching:', jobId)
+        addLog('❌ No se pudo recuperar el estado del proceso desde el servidor')
         setActiveJobId(null)
         return
       }
@@ -130,12 +138,16 @@ export default function LoadDataPage() {
       const job: LoadDataJobStatus = data.job
 
       if (!job) {
+        addLog('❌ Proceso no encontrado en el servidor')
         setActiveJobId(null)
         return
       }
 
-      // Restaurar logs
-      setLogs(job.logs || [])
+      // Restaurar logs desde MongoDB (reemplazar los logs locales con los del servidor)
+      if (job.logs && job.logs.length > 0) {
+        setLogs(job.logs)
+        addLog('✅ Estado recuperado desde el servidor')
+      }
 
       // Restaurar estados de endpoints
       setEndpoints(prev => prev.map(e => {
@@ -170,6 +182,7 @@ export default function LoadDataPage() {
 
     } catch (error) {
       console.error('Error fetching job status:', error)
+      addLog('❌ Error al conectar con el servidor')
       setActiveJobId(null)
     }
   }
@@ -178,28 +191,16 @@ export default function LoadDataPage() {
   useEffect(() => {
     if (!isMounted) return
     
-    // No guardar si está en proceso de carga o polling
-    // Solo guardar estados finales (success, error, pending sin carga activa)
-    if (isLoading || isPolling) {
-      // Guardar el activeJobId durante polling
-      const state: PersistedState = {
-        selectedDate,
-        endpoints,
-        activeJobId: activeJobId || undefined,
-        lastUpdated: new Date().toISOString()
-      }
-      savePersistedState(state)
-      return
-    }
-    
+    // Siempre guardar el estado completo incluyendo logs
     const state: PersistedState = {
       selectedDate,
       endpoints,
       activeJobId: activeJobId || undefined,
+      logs,
       lastUpdated: new Date().toISOString()
     }
     savePersistedState(state)
-  }, [selectedDate, endpoints, activeJobId, isMounted, isLoading, isPolling])
+  }, [selectedDate, endpoints, activeJobId, logs, isMounted, isLoading, isPolling])
 
   const addLog = (message: string) => {
     const timestamp = new Date().toLocaleTimeString('es-CL')
@@ -413,14 +414,22 @@ export default function LoadDataPage() {
     )
     
     if (confirmed) {
+      // Detener polling si está activo
+      if (pollingTimer) {
+        clearInterval(pollingTimer)
+        setPollingTimer(null)
+      }
+      setIsPolling(false)
+      setActiveJobId(null)
+      setIsLoading(false)
+      
+      // Limpiar localStorage
       localStorage.removeItem(STORAGE_KEY)
       
       // Resetear a valores por defecto
       setSelectedDate(getDefaultDate())
       setEndpoints(getDefaultEndpoints())
-      setLogs([])
-      
-      addLog('🔄 Estado reiniciado a valores por defecto')
+      setLogs(['🔄 Estado reiniciado a valores por defecto'])
     }
   }
 
@@ -442,10 +451,13 @@ export default function LoadDataPage() {
       return
     }
 
-    // Iniciar proceso
+    // Iniciar proceso - Limpiar logs y estado previo
     setIsLoading(true)
-    setLogs([])
+    setLogs([]) // Limpiar logs del proceso anterior
     resetStatuses()
+    
+    // Limpiar job anterior si existe
+    setActiveJobId(null)
     
     addLog(`📅 Iniciando carga de datos para ${selectedDate}`)
     addLog(`📊 Endpoints seleccionados: ${enabledEndpoints.map(e => e.label).join(', ')}`)
@@ -699,14 +711,21 @@ export default function LoadDataPage() {
         </Card>
 
         {/* Log del Proceso */}
-        {logs.length > 0 && (
+        {(logs.length > 0 || isLoading || isPolling) && (
           <Card title='Log del Proceso'>
             <div className='bg-gray-900 text-gray-100 p-4 rounded-lg font-mono text-xs sm:text-sm overflow-x-auto max-h-96 overflow-y-auto'>
-              {logs.map((log, index) => (
-                <div key={index} className='mb-1'>
-                  {log}
+              {logs.length > 0 ? (
+                logs.map((log, index) => (
+                  <div key={index} className='mb-1'>
+                    {log}
+                  </div>
+                ))
+              ) : (
+                <div className='text-gray-400 flex items-center gap-2'>
+                  <div className='h-2 w-2 bg-blue-500 rounded-full animate-pulse'></div>
+                  <span>Iniciando proceso...</span>
                 </div>
-              ))}
+              )}
             </div>
           </Card>
         )}
