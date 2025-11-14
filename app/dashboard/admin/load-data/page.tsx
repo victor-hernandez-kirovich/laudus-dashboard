@@ -101,6 +101,8 @@ export default function LoadDataPage() {
     setIsMounted(true)
     const persisted = loadPersistedState()
     
+    console.log('[DEBUG] Estado persistido cargado:', persisted)
+    
     if (persisted) {
       if (persisted.selectedDate) {
         setSelectedDate(persisted.selectedDate)
@@ -110,16 +112,20 @@ export default function LoadDataPage() {
       }
       // Restaurar logs desde localStorage
       if (persisted.logs && persisted.logs.length > 0) {
+        console.log('[DEBUG] Restaurando logs desde localStorage:', persisted.logs.length, 'logs')
         setLogs(persisted.logs)
       }
       // Si hay un jobId activo, restaurar el polling
       if (persisted.activeJobId) {
+        console.log('[DEBUG] Restaurando jobId activo:', persisted.activeJobId)
         setActiveJobId(persisted.activeJobId)
         // Mostrar mensaje de carga mientras se recuperan logs desde MongoDB
         addLog('🔄 Recuperando estado del proceso desde el servidor...')
         // Intentar recuperar el job desde MongoDB
         fetchJobStatusAndResume(persisted.activeJobId)
       }
+    } else {
+      console.log('[DEBUG] No hay estado persistido')
     }
   }, [])
 
@@ -710,8 +716,8 @@ export default function LoadDataPage() {
           </div>
         </Card>
 
-        {/* Log del Proceso */}
-        {(logs.length > 0 || isLoading || isPolling) && (
+        {/* Log del Proceso - Mostrar siempre que haya logs o proceso activo */}
+        {isMounted && (logs.length > 0 || isLoading || isPolling || activeJobId) && (
           <Card title='Log del Proceso'>
             <div className='bg-gray-900 text-gray-100 p-4 rounded-lg font-mono text-xs sm:text-sm overflow-x-auto max-h-96 overflow-y-auto'>
               {logs.length > 0 ? (
