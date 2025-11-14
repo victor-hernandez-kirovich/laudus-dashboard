@@ -102,6 +102,8 @@ export default function LoadDataPage() {
     const persisted = loadPersistedState()
     
     console.log('[DEBUG] Estado persistido cargado:', persisted)
+    console.log('[DEBUG] activeJobId presente?', persisted?.activeJobId ? 'SÍ: ' + persisted.activeJobId : 'NO - undefined o null')
+    console.log('[DEBUG] logs.length:', persisted?.logs?.length || 0)
     
     if (persisted) {
       if (persisted.selectedDate) {
@@ -114,6 +116,8 @@ export default function LoadDataPage() {
       if (persisted.logs && persisted.logs.length > 0) {
         console.log('[DEBUG] Restaurando logs desde localStorage:', persisted.logs.length, 'logs')
         setLogs(persisted.logs)
+      } else {
+        console.log('[DEBUG] No hay logs en localStorage para restaurar')
       }
       // Si hay un jobId activo, restaurar el polling
       if (persisted.activeJobId) {
@@ -123,6 +127,9 @@ export default function LoadDataPage() {
         addLog('🔄 Recuperando estado del proceso desde el servidor...')
         // Intentar recuperar el job desde MongoDB
         fetchJobStatusAndResume(persisted.activeJobId)
+      } else {
+        console.log('[DEBUG] ⚠️ NO HAY activeJobId - El recuadro de logs NO se mostrará')
+        console.log('[DEBUG] Para ver logs, debes INICIAR UN NUEVO PROCESO después de limpiar datos guardados')
       }
     } else {
       console.log('[DEBUG] No hay estado persistido')
