@@ -504,6 +504,20 @@ export default function LoadDataPage() {
       // Guardar el jobId
       const jobId = result.jobId
       setActiveJobId(jobId)
+      
+      // Guardar INMEDIATAMENTE en localStorage para persistir el jobId
+      const initialState: PersistedState = {
+        selectedDate,
+        endpoints,
+        activeJobId: jobId,
+        logs: [
+          `[${new Date().toLocaleTimeString('es-CL')}] 📅 Iniciando carga de datos para ${selectedDate}`,
+          `[${new Date().toLocaleTimeString('es-CL')}] 📊 Endpoints seleccionados: ${enabledEndpoints.map(e => e.label).join(', ')}`
+        ],
+        lastUpdated: new Date().toISOString()
+      }
+      savePersistedState(initialState)
+      console.log('[DEBUG] Estado inicial guardado en localStorage con jobId:', jobId)
 
       // Verificar el modo de ejecución
       if (result.mode === 'github-actions') {
