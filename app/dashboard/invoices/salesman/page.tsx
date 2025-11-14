@@ -1,10 +1,11 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import React, { useState, useEffect } from "react";
 import { Header } from "@/components/layout/Header";
 import { Card } from "@/components/ui/Card";
 import { formatCurrency } from "@/lib/utils";
 import { InvoicesBySalesmanData } from "@/lib/types";
+import { ChevronDown, ChevronUp } from "lucide-react";
 
 export default function InvoicesBySalesmanPage() {
   const [salesmen, setSalesmen] = useState<InvoicesBySalesmanData[]>([]);
@@ -12,6 +13,7 @@ export default function InvoicesBySalesmanPage() {
   const [selectedMonthNumber, setSelectedMonthNumber] = useState<number>(0);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [expandedRow, setExpandedRow] = useState<string | null>(null);
 
   // Compute available years from salesmen
   const availableYears = Array.from(
@@ -201,145 +203,190 @@ export default function InvoicesBySalesmanPage() {
           </div>
         </div>
 
-        {/* Resumen del Mes */}
-        <div>
-          <h2 className="text-xl font-bold text-gray-900 mb-4">
-            {monthName} {selectedYear}
-          </h2>
-
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
-            {/* Total Neto */}
-            <Card>
-              <div className="space-y-1">
-                <p className="text-xs font-medium text-gray-500 uppercase">
-                  Total Neto
-                </p>
-                <p className="text-2xl font-bold text-blue-600">
-                  {formatCurrency(totals.net)}
-                </p>
-              </div>
-            </Card>
-
-            {/* Total Comisiones */}
-            <Card>
-              <div className="space-y-1">
-                <p className="text-xs font-medium text-gray-500 uppercase">
-                  Total Comisiones
-                </p>
-                <p className="text-2xl font-bold text-green-600">
-                  {formatCurrency(totals.comissions)}
-                </p>
-              </div>
-            </Card>
-
-            {/* Total Margen */}
-            <Card>
-              <div className="space-y-1">
-                <p className="text-xs font-medium text-gray-500 uppercase">
-                  Total Margen
-                </p>
-                <p className="text-2xl font-bold text-purple-600">
-                  {formatCurrency(totals.margin)}
-                </p>
-              </div>
-            </Card>
-
-            {/* Ticket Promedio */}
-            <Card>
-              <div className="space-y-1">
-                <p className="text-xs font-medium text-gray-500 uppercase">
-                  Ticket Promedio
-                </p>
-                <p className="text-2xl font-bold text-indigo-600">
-                  {formatCurrency(averageTicket)}
-                </p>
-              </div>
-            </Card>
-          </div>
-        </div>
-
         {/* Tabla de Vendedores */}
         {selectedMonthData.length > 0 ? (
           <Card>
             <div className="overflow-x-auto">
-              <table className="w-full">
+              <table className="w-full md:min-w-[1400px]">
                 <thead>
-                  <tr className="border-b border-gray-200">
-                    <th className="sticky top-0 bg-white px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">
+                  <tr className="bg-purple-600">
+                    <th className="px-4 py-3 text-left text-xs font-semibold text-white uppercase tracking-wider md:sticky md:left-0 bg-purple-600 md:z-10">
                       Vendedor
                     </th>
-                    <th className="sticky top-0 bg-white px-4 py-3 text-right text-xs font-semibold text-gray-600 uppercase tracking-wider">
+                    <th className="px-4 py-3 text-right text-xs font-semibold text-white uppercase tracking-wider">
                       Neto
                     </th>
-                    <th className="sticky top-0 bg-white px-4 py-3 text-right text-xs font-semibold text-gray-600 uppercase tracking-wider">
+                    <th className="px-4 py-3 text-right text-xs font-semibold text-white uppercase tracking-wider hidden md:table-cell">
                       Neto %
                     </th>
-                    <th className="sticky top-0 bg-white px-4 py-3 text-right text-xs font-semibold text-gray-600 uppercase tracking-wider">
+                    <th className="px-4 py-3 text-right text-xs font-semibold text-white uppercase tracking-wider hidden md:table-cell">
                       Comisiones
                     </th>
-                    <th className="sticky top-0 bg-white px-4 py-3 text-right text-xs font-semibold text-gray-600 uppercase tracking-wider">
+                    <th className="px-4 py-3 text-right text-xs font-semibold text-white uppercase tracking-wider hidden md:table-cell">
                       Margen
                     </th>
-                    <th className="sticky top-0 bg-white px-4 py-3 text-right text-xs font-semibold text-gray-600 uppercase tracking-wider">
+                    <th className="px-4 py-3 text-right text-xs font-semibold text-white uppercase tracking-wider hidden md:table-cell">
                       Margen %
                     </th>
-                    <th className="sticky top-0 bg-white px-4 py-3 text-right text-xs font-semibold text-gray-600 uppercase tracking-wider">
+                    <th className="px-4 py-3 text-right text-xs font-semibold text-white uppercase tracking-wider hidden md:table-cell">
                       Descuentos
                     </th>
-                    <th className="sticky top-0 bg-white px-4 py-3 text-right text-xs font-semibold text-gray-600 uppercase tracking-wider">
+                    <th className="px-4 py-3 text-right text-xs font-semibold text-white uppercase tracking-wider hidden md:table-cell">
                       Descuentos %
                     </th>
-                    <th className="sticky top-0 bg-white px-4 py-3 text-right text-xs font-semibold text-gray-600 uppercase tracking-wider">
+                    <th className="px-4 py-3 text-right text-xs font-semibold text-white uppercase tracking-wider hidden md:table-cell">
                       Documentos
                     </th>
-                    <th className="sticky top-0 bg-white px-4 py-3 text-right text-xs font-semibold text-gray-600 uppercase tracking-wider">
+                    <th className="px-4 py-3 text-right text-xs font-semibold text-white uppercase tracking-wider hidden md:table-cell">
                       Ticket Promedio
                     </th>
                   </tr>
                 </thead>
-                <tbody className="divide-y divide-gray-200">
+                <tbody className="divide-y divide-gray-100">
                   {selectedMonthData.map((salesman, index) => (
-                    <tr
-                      key={`${salesman.salesmanId}-${index}`}
-                      className="hover:bg-gray-50 transition-colors"
-                    >
-                      <td className="px-4 py-3 text-sm text-gray-900">
-                        <div>
-                          <div className="font-medium">{salesman.salesmanName}</div>
-                          <div className="text-xs text-gray-500">
-                            ID: {salesman.salesmanId}
+                    <React.Fragment key={`${salesman.salesmanId}-${index}`}>
+                      <tr className="hover:bg-purple-50 cursor-pointer transition-colors">
+                        <td 
+                          className="px-4 py-3 text-sm text-gray-900 md:sticky md:left-0 bg-white"
+                          onClick={() => {
+                            const isMobile = window.innerWidth < 768;
+                            if (isMobile) {
+                              const rowId = String(salesman.salesmanId);
+                              setExpandedRow(expandedRow === rowId ? null : rowId);
+                            }
+                          }}
+                        >
+                          <div>
+                            <div className="font-medium">{salesman.salesmanName}</div>
+                            <div className="text-xs text-gray-500">
+                              ID: {salesman.salesmanId}
+                            </div>
                           </div>
-                        </div>
-                      </td>
-                      <td className="px-4 py-3 text-sm text-right font-medium text-gray-900">
-                        {formatCurrency(salesman.net)}
-                      </td>
-                      <td className="px-4 py-3 text-sm text-right text-gray-600">
-                        {salesman.netPercentage}%
-                      </td>
-                      <td className="px-4 py-3 text-sm text-right text-gray-900">
-                        {formatCurrency(salesman.comissions)}
-                      </td>
-                      <td className="px-4 py-3 text-sm text-right text-gray-900">
-                        {formatCurrency(salesman.margin)}
-                      </td>
-                      <td className="px-4 py-3 text-sm text-right text-gray-600">
-                        {salesman.marginPercentage}%
-                      </td>
-                      <td className="px-4 py-3 text-sm text-right text-gray-900">
-                        {formatCurrency(salesman.discounts)}
-                      </td>
-                      <td className="px-4 py-3 text-sm text-right text-gray-600">
-                        {salesman.discountsPercentage}%
-                      </td>
-                      <td className="px-4 py-3 text-sm text-right text-gray-900">
-                        {salesman.numberOfDocuments.toLocaleString("es-CL")}
-                      </td>
-                      <td className="px-4 py-3 text-sm text-right text-gray-900">
-                        {salesman.averageTicket.toLocaleString("es-CL")}
-                      </td>
-                    </tr>
+                        </td>
+                        <td 
+                          className="px-4 py-3 text-sm text-gray-900"
+                          onClick={() => {
+                            const isMobile = window.innerWidth < 768;
+                            if (isMobile) {
+                              const rowId = String(salesman.salesmanId);
+                              setExpandedRow(expandedRow === rowId ? null : rowId);
+                            }
+                          }}
+                        >
+                          <div className="flex items-center justify-end gap-2">
+                            <span className="text-right">{formatCurrency(salesman.net)}</span>
+                            <span className="md:hidden">
+                              {expandedRow === String(salesman.salesmanId) ? (
+                                <ChevronUp className="h-4 w-4 text-gray-500" />
+                              ) : (
+                                <ChevronDown className="h-4 w-4 text-gray-500" />
+                              )}
+                            </span>
+                          </div>
+                        </td>
+                        <td className="px-4 py-3 text-sm text-right text-gray-900 hidden md:table-cell">
+                          {salesman.netPercentage}%
+                        </td>
+                        <td className="px-4 py-3 text-sm text-right text-gray-900 hidden md:table-cell">
+                          {formatCurrency(salesman.comissions)}
+                        </td>
+                        <td className="px-4 py-3 text-sm text-right text-gray-900 hidden md:table-cell">
+                          {formatCurrency(salesman.margin)}
+                        </td>
+                        <td className="px-4 py-3 text-sm text-right text-gray-900 hidden md:table-cell">
+                          {salesman.marginPercentage}%
+                        </td>
+                        <td className="px-4 py-3 text-sm text-right text-gray-900 hidden md:table-cell">
+                          {formatCurrency(salesman.discounts)}
+                        </td>
+                        <td className="px-4 py-3 text-sm text-right text-gray-900 hidden md:table-cell">
+                          {salesman.discountsPercentage}%
+                        </td>
+                        <td className="px-4 py-3 text-sm text-right text-gray-900 hidden md:table-cell">
+                          {salesman.numberOfDocuments.toLocaleString("es-CL")}
+                        </td>
+                        <td className="px-4 py-3 text-sm text-right text-gray-900 hidden md:table-cell">
+                          {formatCurrency(salesman.averageTicket)}
+                        </td>
+                      </tr>
+
+                      {/* Fila expandida para mobile */}
+                      {expandedRow === String(salesman.salesmanId) && (
+                        <tr className="md:hidden bg-gray-50">
+                          <td colSpan={2} className="px-4 py-4">
+                            <div className="space-y-3">
+                              <div className="flex justify-between items-center">
+                                <span className="text-xs font-medium text-gray-500">Neto %:</span>
+                                <span className="text-sm text-gray-900">{salesman.netPercentage}%</span>
+                              </div>
+                              <div className="flex justify-between items-center">
+                                <span className="text-xs font-medium text-gray-500">Comisiones:</span>
+                                <span className="text-sm text-gray-900">{formatCurrency(salesman.comissions)}</span>
+                              </div>
+                              <div className="flex justify-between items-center">
+                                <span className="text-xs font-medium text-gray-500">Margen:</span>
+                                <span className="text-sm text-gray-900">{formatCurrency(salesman.margin)}</span>
+                              </div>
+                              <div className="flex justify-between items-center">
+                                <span className="text-xs font-medium text-gray-500">Margen %:</span>
+                                <span className="text-sm text-gray-900">{salesman.marginPercentage}%</span>
+                              </div>
+                              <div className="flex justify-between items-center">
+                                <span className="text-xs font-medium text-gray-500">Descuentos:</span>
+                                <span className="text-sm text-gray-900">{formatCurrency(salesman.discounts)}</span>
+                              </div>
+                              <div className="flex justify-between items-center">
+                                <span className="text-xs font-medium text-gray-500">Descuentos %:</span>
+                                <span className="text-sm text-gray-900">{salesman.discountsPercentage}%</span>
+                              </div>
+                              <div className="flex justify-between items-center">
+                                <span className="text-xs font-medium text-gray-500">Documentos:</span>
+                                <span className="text-sm text-gray-900">{salesman.numberOfDocuments.toLocaleString("es-CL")}</span>
+                              </div>
+                              <div className="flex justify-between items-center">
+                                <span className="text-xs font-medium text-gray-500">Ticket Promedio:</span>
+                                <span className="text-sm text-gray-900">{formatCurrency(salesman.averageTicket)}</span>
+                              </div>
+                            </div>
+                          </td>
+                        </tr>
+                      )}
+                    </React.Fragment>
                   ))}
+
+                  {/* Fila de Totales */}
+                  <tr className="bg-purple-100 border-t-2 border-purple-300">
+                    <td className="px-4 py-4 text-sm text-gray-900 uppercase font-bold md:sticky md:left-0 bg-purple-100">
+                      Total {monthName} {selectedYear}
+                    </td>
+                    <td className="px-4 py-4 text-sm text-right text-gray-900 font-bold">
+                      {formatCurrency(totals.net)}
+                    </td>
+                    <td className="px-4 py-4 text-sm text-right text-gray-900 font-bold hidden md:table-cell">
+                      100.00%
+                    </td>
+                    <td className="px-4 py-4 text-sm text-right text-gray-900 font-bold hidden md:table-cell">
+                      {formatCurrency(totals.comissions)}
+                    </td>
+                    <td className="px-4 py-4 text-sm text-right text-gray-900 font-bold hidden md:table-cell">
+                      {formatCurrency(totals.margin)}
+                    </td>
+                    <td className="px-4 py-4 text-sm text-right text-gray-900 font-bold hidden md:table-cell">
+                      {totals.net > 0 ? ((totals.margin / totals.net) * 100).toFixed(2) : '0.00'}%
+                    </td>
+                    <td className="px-4 py-4 text-sm text-right text-gray-900 font-bold hidden md:table-cell">
+                      {formatCurrency(totals.discounts)}
+                    </td>
+                    <td className="px-4 py-4 text-sm text-right text-gray-900 font-bold hidden md:table-cell">
+                      {totals.net > 0 ? ((totals.discounts / totals.net) * 100).toFixed(2) : '0.00'}%
+                    </td>
+                    <td className="px-4 py-4 text-sm text-right text-gray-900 font-bold hidden md:table-cell">
+                      {totals.numberOfDocuments.toLocaleString("es-CL")}
+                    </td>
+                    <td className="px-4 py-4 text-sm text-right text-gray-900 font-bold hidden md:table-cell">
+                      {formatCurrency(averageTicket)}
+                    </td>
+                  </tr>
                 </tbody>
               </table>
             </div>

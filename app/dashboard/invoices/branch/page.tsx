@@ -1,9 +1,9 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import React, { useState, useEffect } from 'react'
 import { Card } from '@/components/ui/Card'
 import { formatCurrency } from '@/lib/utils'
-import { Building2, TrendingUp, DollarSign, Tag } from 'lucide-react'
+import { Building2, ChevronDown, ChevronUp } from 'lucide-react'
 import { Header } from '@/components/layout/Header'
 
 interface BranchData {
@@ -38,6 +38,7 @@ export default function InvoicesByBranchPage() {
   const [selectedYear, setSelectedYear] = useState<number>(0)
   const [selectedMonthNumber, setSelectedMonthNumber] = useState<number>(0)
   const [loading, setLoading] = useState(true)
+  const [expandedRow, setExpandedRow] = useState<string | null>(null)
 
   useEffect(() => {
     fetchData()
@@ -168,141 +169,149 @@ export default function InvoicesByBranchPage() {
       </div>
       </div>
 
-      {/* Summary Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-        <Card>
-          <div className="flex items-center justify-between">
-            <div>
-              <p className="text-sm font-medium text-gray-600">Total Neto</p>
-              <p className="text-2xl font-bold text-gray-900 mt-1">
-                {formatCurrency(data.totalNet)}
-              </p>
-            </div>
-            <div className="p-3 bg-blue-100 rounded-lg">
-              <DollarSign className="h-6 w-6 text-blue-600" />
-            </div>
-          </div>
-        </Card>
-
-        <Card>
-          <div className="flex items-center justify-between">
-            <div>
-              <p className="text-sm font-medium text-gray-600">Total Margen</p>
-              <p className="text-2xl font-bold text-gray-900 mt-1">
-                {formatCurrency(data.totalMargin)}
-              </p>
-              <p className="text-xs text-gray-500 mt-1">
-                Promedio: {data.avgMarginPercentage.toFixed(2)}%
-              </p>
-            </div>
-            <div className="p-3 bg-green-100 rounded-lg">
-              <TrendingUp className="h-6 w-6 text-green-600" />
-            </div>
-          </div>
-        </Card>
-
-        <Card>
-          <div className="flex items-center justify-between">
-            <div>
-              <p className="text-sm font-medium text-gray-600">Total Descuentos</p>
-              <p className="text-2xl font-bold text-gray-900 mt-1">
-                {formatCurrency(data.totalDiscounts)}
-              </p>
-              <p className="text-xs text-gray-500 mt-1">
-                Promedio: {data.avgDiscountPercentage.toFixed(2)}%
-              </p>
-            </div>
-            <div className="p-3 bg-orange-100 rounded-lg">
-              <Tag className="h-6 w-6 text-orange-600" />
-            </div>
-          </div>
-        </Card>
-
-        <Card>
-          <div className="flex items-center justify-between">
-            <div>
-              <p className="text-sm font-medium text-gray-600">Sucursales</p>
-              <p className="text-2xl font-bold text-gray-900 mt-1">
-                {data.branchCount}
-              </p>
-            </div>
-            <div className="p-3 bg-purple-100 rounded-lg">
-              <Building2 className="h-6 w-6 text-purple-600" />
-            </div>
-          </div>
-        </Card>
-      </div>
-
       {/* Branches Table */}
       <Card>
-        <div className="px-6 py-4 border-b border-gray-200">
-          <h2 className="text-lg font-semibold text-gray-900">Detalle por Sucursal</h2>
-        </div>
         <div className="overflow-x-auto">
-          <table className="min-w-full divide-y divide-gray-200">
-            <thead className="bg-gray-50">
-              <tr>
-                <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+          <table className="w-full md:min-w-[1200px]">
+            <thead>
+              <tr className="bg-green-600">
+                <th className="px-4 py-3 text-left text-xs font-semibold text-white uppercase tracking-wider md:sticky md:left-0 bg-green-600 md:z-10">
                   Sucursal
                 </th>
-                <th scope="col" className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
+                <th className="px-4 py-3 text-right text-xs font-semibold text-white uppercase tracking-wider">
                   Ventas Netas
                 </th>
-                <th scope="col" className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
+                <th className="px-4 py-3 text-right text-xs font-semibold text-white uppercase tracking-wider hidden md:table-cell">
                   % Participación
                 </th>
-                <th scope="col" className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
+                <th className="px-4 py-3 text-right text-xs font-semibold text-white uppercase tracking-wider hidden md:table-cell">
                   Margen
                 </th>
-                <th scope="col" className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
+                <th className="px-4 py-3 text-right text-xs font-semibold text-white uppercase tracking-wider hidden md:table-cell">
                   % Margen
                 </th>
-                <th scope="col" className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
+                <th className="px-4 py-3 text-right text-xs font-semibold text-white uppercase tracking-wider hidden md:table-cell">
                   Descuentos
                 </th>
-                <th scope="col" className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
+                <th className="px-4 py-3 text-right text-xs font-semibold text-white uppercase tracking-wider hidden md:table-cell">
                   % Descuento
                 </th>
               </tr>
             </thead>
-            <tbody className="bg-white divide-y divide-gray-200">
+            <tbody className="divide-y divide-gray-100">
               {sortedBranches.map((branch) => (
-                <tr key={branch.branch} className="hover:bg-gray-50">
-                  <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
-                    {branch.branch}
-                  </td>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900 text-right font-semibold">
-                    {formatCurrency(branch.net)}
-                  </td>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900 text-right">
-                    <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800">
+                <React.Fragment key={branch.branch}>
+                  <tr className="hover:bg-blue-50 cursor-pointer transition-colors">
+                    <td 
+                      className="px-4 py-3 text-sm font-medium text-gray-900 md:sticky md:left-0 bg-white"
+                      onClick={() => {
+                        const isMobile = window.innerWidth < 768;
+                        if (isMobile) {
+                          setExpandedRow(expandedRow === branch.branch ? null : branch.branch);
+                        }
+                      }}
+                    >
+                      {branch.branch}
+                    </td>
+                    <td 
+                      className="px-4 py-3 text-sm text-gray-900"
+                      onClick={() => {
+                        const isMobile = window.innerWidth < 768;
+                        if (isMobile) {
+                          setExpandedRow(expandedRow === branch.branch ? null : branch.branch);
+                        }
+                      }}
+                    >
+                      <div className="flex items-center justify-end gap-2">
+                        <span className="text-right">{formatCurrency(branch.net)}</span>
+                        <span className="md:hidden">
+                          {expandedRow === branch.branch ? (
+                            <ChevronUp className="h-4 w-4 text-gray-500" />
+                          ) : (
+                            <ChevronDown className="h-4 w-4 text-gray-500" />
+                          )}
+                        </span>
+                      </div>
+                    </td>
+                    <td className="px-4 py-3 text-sm text-right text-gray-900 hidden md:table-cell">
                       {branch.netPercentage.toFixed(2)}%
-                    </span>
-                  </td>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900 text-right">
-                    {formatCurrency(branch.margin)}
-                  </td>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900 text-right">
-                    <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
-                      branch.marginPercentage >= 20 
-                        ? 'bg-green-100 text-green-800' 
-                        : branch.marginPercentage >= 10
-                        ? 'bg-yellow-100 text-yellow-800'
-                        : 'bg-red-100 text-red-800'
-                    }`}>
+                    </td>
+                    <td className="px-4 py-3 text-sm text-right text-gray-900 hidden md:table-cell">
+                      {formatCurrency(branch.margin)}
+                    </td>
+                    <td className="px-4 py-3 text-sm text-right text-gray-900 hidden md:table-cell">
                       {branch.marginPercentage.toFixed(2)}%
-                    </span>
-                  </td>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900 text-right">
-                    {formatCurrency(branch.discounts)}
-                  </td>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900 text-right">
-                    <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-orange-100 text-orange-800">
+                    </td>
+                    <td className="px-4 py-3 text-sm text-right text-gray-900 hidden md:table-cell">
+                      {formatCurrency(branch.discounts)}
+                    </td>
+                    <td className="px-4 py-3 text-sm text-right text-gray-900 hidden md:table-cell">
                       {branch.discountsPercentage.toFixed(2)}%
-                    </span>
-                  </td>
-                </tr>
+                    </td>
+                  </tr>
+
+                  {/* Fila expandida para mobile */}
+                  {expandedRow === branch.branch && (
+                    <tr className="md:hidden bg-gray-50">
+                      <td colSpan={2} className="px-4 py-4">
+                        <div className="space-y-3">
+                          <div className="flex justify-between items-center">
+                            <span className="text-xs font-medium text-gray-500">% Participación:</span>
+                            <span className="text-sm text-gray-900">
+                              {branch.netPercentage.toFixed(2)}%
+                            </span>
+                          </div>
+                          <div className="flex justify-between items-center">
+                            <span className="text-xs font-medium text-gray-500">Margen:</span>
+                            <span className="text-sm text-gray-900">{formatCurrency(branch.margin)}</span>
+                          </div>
+                          <div className="flex justify-between items-center">
+                            <span className="text-xs font-medium text-gray-500">% Margen:</span>
+                            <span className="text-sm text-gray-900">
+                              {branch.marginPercentage.toFixed(2)}%
+                            </span>
+                          </div>
+                          <div className="flex justify-between items-center">
+                            <span className="text-xs font-medium text-gray-500">Descuentos:</span>
+                            <span className="text-sm text-gray-900">{formatCurrency(branch.discounts)}</span>
+                          </div>
+                          <div className="flex justify-between items-center">
+                            <span className="text-xs font-medium text-gray-500">% Descuento:</span>
+                            <span className="text-sm text-gray-900">
+                              {branch.discountsPercentage.toFixed(2)}%
+                            </span>
+                          </div>
+                        </div>
+                      </td>
+                    </tr>
+                  )}
+                </React.Fragment>
               ))}
+
+              {/* Fila de Totales */}
+              <tr className="bg-green-100 border-t-2 border-green-300">
+                <td className="px-4 py-4 text-sm text-gray-900 uppercase font-bold md:sticky md:left-0 bg-green-100">
+                  Total {data.monthName} {data.year}
+                </td>
+                <td className="px-4 py-4 text-sm text-right text-gray-900 font-bold">
+                  {formatCurrency(data.totalNet)}
+                </td>
+                <td className="px-4 py-4 text-sm text-right text-gray-900 font-bold hidden md:table-cell">
+                  100.00%
+                </td>
+                <td className="px-4 py-4 text-sm text-right text-gray-900 font-bold hidden md:table-cell">
+                  {formatCurrency(data.totalMargin)}
+                </td>
+                <td className="px-4 py-4 text-sm text-right text-gray-900 font-bold hidden md:table-cell">
+                  {data.avgMarginPercentage.toFixed(2)}%
+                </td>
+                <td className="px-4 py-4 text-sm text-right text-gray-900 font-bold hidden md:table-cell">
+                  {formatCurrency(data.totalDiscounts)}
+                </td>
+                <td className="px-4 py-4 text-sm text-right text-gray-900 font-bold hidden md:table-cell">
+                  {data.avgDiscountPercentage.toFixed(2)}%
+                </td>
+              </tr>
             </tbody>
           </table>
         </div>
