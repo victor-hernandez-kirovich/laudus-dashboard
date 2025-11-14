@@ -180,10 +180,12 @@ export default function LoadDataPage() {
         startPollingForJob(jobId, job.date, enabledEndpoints)
       } else if (job.status === 'completed') {
         addLog('✅ Proceso completado anteriormente')
-        setActiveJobId(null)
+        // NO limpiar activeJobId aquí - mantener para mostrar logs históricos
+        // setActiveJobId(null)
       } else if (job.status === 'failed' || job.status === 'timeout') {
         addLog(`⚠️ Proceso anterior ${job.status === 'failed' ? 'falló' : 'expiró'}`)
-        setActiveJobId(null)
+        // NO limpiar activeJobId aquí - mantener para mostrar logs históricos
+        // setActiveJobId(null)
       }
 
     } catch (error) {
@@ -365,8 +367,14 @@ export default function LoadDataPage() {
             })
           })
           
-          stopPolling()
+          // Detener polling pero mantener activeJobId para mostrar logs
+          if (pollingTimer) {
+            clearInterval(pollingTimer)
+            setPollingTimer(null)
+          }
+          setIsPolling(false)
           setIsLoading(false)
+          // NO limpiar activeJobId aquí - mantener para persistir logs
           return
         }
         
@@ -400,8 +408,14 @@ export default function LoadDataPage() {
             })
           })
           
-          stopPolling()
+          // Detener polling pero mantener activeJobId para mostrar logs
+          if (pollingTimer) {
+            clearInterval(pollingTimer)
+            setPollingTimer(null)
+          }
+          setIsPolling(false)
           setIsLoading(false)
+          // NO limpiar activeJobId aquí - mantener para persistir logs
         }
         
       } catch (error) {
