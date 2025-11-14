@@ -57,18 +57,32 @@ export default function DiasCobroPagoPage() {
 
       const rawData: Balance8ColumnsDocument[] = result.data
       
-      // Ordenar por fecha descendente
-      const sortedData = rawData.sort((a, b) => 
-        new Date(b.date).getTime() - new Date(a.date).getTime()
-      )
-
-      // Tomar los últimos N registros
-      const limitedData = sortedData.slice(0, 12)
-
-      // Calcular indicadores para cada mes
-      const calculatedData = calculateDiasCoboPago(limitedData)
+      // Primero calcular indicadores con TODOS los datos (para tener el contexto de meses anteriores)
+      const calculatedData = calculateDiasCoboPago(rawData)
       
-      setChartData(calculatedData)
+      // Luego filtrar por datos mensuales (último día de cada mes)
+      const filterMonthlyCalculated = (data: DiasCoboPagoData[]) => {
+        const monthlyMap = new Map()
+        
+        data.forEach(record => {
+          const monthKey = record.date.substring(0, 7) // YYYY-MM
+          const existing = monthlyMap.get(monthKey)
+          
+          // Quedarnos con el último día del mes (fecha más reciente)
+          if (!existing || record.date > existing.date) {
+            monthlyMap.set(monthKey, record)
+          }
+        })
+        
+        // Convertir a array y ordenar cronológicamente
+        return Array.from(monthlyMap.values()).sort((a, b) => 
+          a.date.localeCompare(b.date)
+        )
+      }
+
+      const monthlyCalculatedData = filterMonthlyCalculated(calculatedData)
+      
+      setChartData(monthlyCalculatedData)
       setLoading(false)
     } catch (err) {
       console.error('Error fetching data:', err)

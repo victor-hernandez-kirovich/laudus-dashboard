@@ -124,7 +124,29 @@ export default function EstructuraFinancieraPage() {
     })
   }
 
-  const data = calculateEstructuraFinanciera()
+  const filterMonthlyData = (data: any[]) => {
+    if (!data || data.length === 0) return []
+    
+    const monthlyMap = new Map()
+    
+    data.forEach(record => {
+      const monthKey = record.date.substring(0, 7) // YYYY-MM
+      const existing = monthlyMap.get(monthKey)
+      
+      // Quedarnos con el último día del mes (fecha más reciente)
+      if (!existing || record.date > existing.date) {
+        monthlyMap.set(monthKey, record)
+      }
+    })
+    
+    // Convertir a array y ordenar cronológicamente
+    return Array.from(monthlyMap.values()).sort((a, b) => 
+      a.date.localeCompare(b.date)
+    )
+  }
+
+  const allEstructura = calculateEstructuraFinanciera()
+  const data = filterMonthlyData(allEstructura)
   const latest = data[0]
 
   return (

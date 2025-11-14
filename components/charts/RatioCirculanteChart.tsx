@@ -19,11 +19,10 @@ export function CurrentRatioChart({ data }: CurrentRatioChartProps) {
     // Usar parsing directo para evitar problemas de zona horaria
     const [year, month] = dateString.split('-').map(Number)
     const months = [
-      'Ene', 'Feb', 'Mar', 'Abr', 'May', 'Jun',
-      'Jul', 'Ago', 'Sep', 'Oct', 'Nov', 'Dic'
+      'Enero', 'Febrero', 'Marzo', 'Abril', 'Mayo', 'Junio',
+      'Julio', 'Agosto', 'Septiembre', 'Octubre', 'Noviembre', 'Diciembre'
     ]
-    const yearShort = year.toString().slice(-2) // Últimos 2 dígitos del año
-    return `${months[month - 1]} ${yearShort}`
+    return `${months[month - 1]} ${year}`
   }
 
   const formatCurrency = (value: number): string => {
@@ -42,17 +41,17 @@ export function CurrentRatioChart({ data }: CurrentRatioChartProps) {
     activos: item.activos,
     pasivos: item.pasivos,
     inventarios: item.inventarios
-  })).reverse() // Invertir para mostrar cronológicamente
+  }))
 
   return (
-    <Card title="💧 Ratios de Liquidez" subtitle={`Últimos ${data.length} registros`}>
+    <Card title="💧 Ratios de Liquidez" subtitle={`Últimos ${data.length} meses`}>
       <div className='h-80'>
         <ResponsiveContainer width="100%" height="100%">
           <LineChart data={chartData} margin={{ top: 5, right: 20, left: 10, bottom: 5 }}>
             <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" />
             <XAxis 
               dataKey="date" 
-              tick={{ fontSize: 12 }}
+              tick={{ fontSize: 13, fill: '#111827', fontWeight: 600 }}
               stroke="#6b7280"
             />
             <YAxis 
@@ -67,9 +66,10 @@ export function CurrentRatioChart({ data }: CurrentRatioChartProps) {
                 borderRadius: '8px',
                 padding: '12px'
               }}
+              labelStyle={{ fontWeight: 'bold', marginBottom: '8px', color: '#111827', fontSize: '14px' }}
               formatter={(value: any, name: string) => {
                 if (name === 'Ratio Corriente' || name === 'Prueba Ácida') {
-                  return [value.toFixed(2), name]
+                  return [`${value.toFixed(2)}x`, name]
                 }
                 if (name === 'activos') {
                   return [formatCurrency(value), 'Activos Corrientes']
@@ -82,7 +82,6 @@ export function CurrentRatioChart({ data }: CurrentRatioChartProps) {
                 }
                 return [value, name]
               }}
-              labelStyle={{ fontWeight: 'bold', marginBottom: '8px' }}
             />
             
             <Legend 

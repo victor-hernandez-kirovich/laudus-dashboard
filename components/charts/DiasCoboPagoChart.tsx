@@ -32,13 +32,13 @@ export function DiasCoboPagoChart({ data }: DiasCoboPagoChartProps) {
   }, [data])
 
   const formatSpanishDate = (dateString: string): string => {
-    const [year, month, day] = dateString.split('-').map(Number)
+    // Usar parsing directo para evitar problemas de zona horaria
+    const [year, month] = dateString.split('-').map(Number)
     const months = [
-      'Ene', 'Feb', 'Mar', 'Abr', 'May', 'Jun',
-      'Jul', 'Ago', 'Sep', 'Oct', 'Nov', 'Dic'
+      'Enero', 'Febrero', 'Marzo', 'Abril', 'Mayo', 'Junio',
+      'Julio', 'Agosto', 'Septiembre', 'Octubre', 'Noviembre', 'Diciembre'
     ]
-    // Mostrar día y mes para mejor granularidad
-    return `${day} ${months[month - 1]}`
+    return `${months[month - 1]} ${year}`
   }
 
   const chartData = data.map(item => ({
@@ -52,7 +52,7 @@ export function DiasCoboPagoChart({ data }: DiasCoboPagoChartProps) {
     costoVentas: item.costoVentas,
     gap: item.gap,
     originalData: item
-  })).reverse() // Invertir para mostrar cronológicamente
+  }))
 
   // Custom Tooltip que actualiza el estado
   const CustomTooltip = ({ active, payload }: any) => {
@@ -84,7 +84,7 @@ export function DiasCoboPagoChart({ data }: DiasCoboPagoChartProps) {
   const gapBg = gapStatus === 'negativo' ? 'bg-red-50 border-red-200' : gapStatus === 'positivo' ? 'bg-green-50 border-green-200' : 'bg-gray-50 border-gray-200'
 
   return (
-    <Card title="💰 Días de Cobro y Pago" subtitle={`Últimos ${data.length} registros`}>
+    <Card title="💰 Días de Cobro y Pago" subtitle={`Últimos ${data.length} meses`}>
       {/* Cards Superiores con valores dinámicos */}
       <div className='grid grid-cols-1 md:grid-cols-3 gap-4 mb-6'>
         <div className='bg-blue-50 border-2 border-blue-200 rounded-lg p-4 text-center'>
@@ -124,7 +124,7 @@ export function DiasCoboPagoChart({ data }: DiasCoboPagoChartProps) {
             <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" />
             <XAxis 
               dataKey="date" 
-              tick={{ fontSize: 12 }}
+              tick={{ fontSize: 13, fill: '#111827', fontWeight: 600 }}
               stroke="#6b7280"
             />
             <YAxis 
@@ -157,7 +157,7 @@ export function DiasCoboPagoChart({ data }: DiasCoboPagoChartProps) {
       {/* Fórmulas de Cálculo con valores dinámicos */}
       <div className='mt-6 pt-6 border-t border-gray-200'>
         <h3 className='text-sm font-semibold text-gray-700 mb-4'>📐 Fórmulas de Cálculo</h3>
-        <div className='grid grid-cols-1 md:grid-cols-2 gap-4'>
+        <div className='grid grid-cols-1 md:grid-cols-2 gap-4 max-w-4xl'>
           {/* Días de Cobro */}
           <div className='bg-blue-50 border border-blue-200 rounded-lg p-4'>
             <div className='flex items-center gap-2 mb-2'>
@@ -211,7 +211,7 @@ export function DiasCoboPagoChart({ data }: DiasCoboPagoChartProps) {
         </div>
 
         {/* Interpretación del GAP */}
-        <div className='mt-4 bg-gray-50 border border-gray-200 rounded-lg p-4'>
+        <div className='mt-4 bg-gray-50 border border-gray-200 rounded-lg p-4 max-w-4xl'>
           <p className='font-semibold text-gray-800 mb-3'>💡 Interpretación del GAP:</p>
           <div className='space-y-2 text-sm'>
             <div className='flex items-start gap-2'>

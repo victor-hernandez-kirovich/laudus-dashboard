@@ -29,15 +29,14 @@ export function WorkingCapitalChart({ data }: WorkingCapitalChartProps) {
     // Usar parsing directo para evitar problemas de zona horaria
     const [year, month] = dateString.split('-').map(Number)
     const months = [
-      'Ene', 'Feb', 'Mar', 'Abr', 'May', 'Jun',
-      'Jul', 'Ago', 'Sep', 'Oct', 'Nov', 'Dic'
+      'Enero', 'Febrero', 'Marzo', 'Abril', 'Mayo', 'Junio',
+      'Julio', 'Agosto', 'Septiembre', 'Octubre', 'Noviembre', 'Diciembre'
     ]
-    const yearShort = year.toString().slice(-2) // Últimos 2 dígitos del año
-    return `${months[month - 1]} ${yearShort}`
+    return `${months[month - 1]} ${year}`
   }
 
-  // Preparar datos para el gráfico (invertir orden para mostrar cronológicamente)
-  const chartData = [...data].reverse().map(item => ({
+  // Preparar datos para el gráfico
+  const chartData = data.map(item => ({
     date: formatSpanishDate(item.date),
     'Capital de Trabajo': item.workingCapital
   }))
@@ -53,12 +52,12 @@ export function WorkingCapitalChart({ data }: WorkingCapitalChartProps) {
       const value = payload[0].value
       return (
         <div className='bg-white p-4 border border-gray-200 rounded-lg shadow-lg'>
-          <p className='font-semibold text-gray-900 mb-2'>{label}</p>
+          <p className='font-bold text-gray-900 mb-2' style={{ color: '#111827', fontSize: '14px' }}>{label}</p>
           <div className='flex items-center justify-between gap-4 text-sm'>
             <span className='font-medium' style={{ color: '#d4a574' }}>
               Capital de Trabajo:
             </span>
-            <span className='font-bold'>
+            <span className='font-bold' style={{ color: '#111827' }}>
               {formatCurrency(value)}
             </span>
           </div>
@@ -69,7 +68,7 @@ export function WorkingCapitalChart({ data }: WorkingCapitalChartProps) {
   }
 
   return (
-    <Card title='💼 Capital de Trabajo' subtitle={`Últimos ${data.length} registros`}>
+    <Card title='💼 Capital de Trabajo' subtitle={`Últimos ${data.length} meses`}>
       <div className='h-80 w-full'>
         <ResponsiveContainer width='100%' height='100%'>
           <BarChart
@@ -79,8 +78,8 @@ export function WorkingCapitalChart({ data }: WorkingCapitalChartProps) {
             <CartesianGrid strokeDasharray='3 3' stroke='#e5e7eb' />
             <XAxis 
               dataKey='date' 
+              tick={{ fontSize: 13, fill: '#111827', fontWeight: 600 }}
               stroke='#6b7280'
-              style={{ fontSize: '12px' }}
             />
             <YAxis 
               stroke='#6b7280'
@@ -127,7 +126,7 @@ export function WorkingCapitalChart({ data }: WorkingCapitalChartProps) {
       {/* Fórmula de Cálculo */}
       <div className='mt-6 pt-6 border-t border-gray-200'>
         <h3 className='text-sm font-semibold text-gray-700 mb-4'>📐 Fórmula de Cálculo</h3>
-        <div className='bg-amber-50 border border-amber-200 rounded-lg p-4'>
+        <div className='bg-amber-50 border border-amber-200 rounded-lg p-4 max-w-4xl'>
           <div className='mb-3'>
             <h4 className='font-semibold text-gray-900 mb-2'>Capital de Trabajo</h4>
             <div className='text-sm text-gray-700'>

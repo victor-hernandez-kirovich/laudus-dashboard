@@ -59,7 +59,29 @@ export default function RatioCirculantePage() {
     })
   }
 
-  const data = calculateRatios()
+  const filterMonthlyData = (data: any[]) => {
+    if (!data || data.length === 0) return []
+    
+    const monthlyMap = new Map()
+    
+    data.forEach(record => {
+      const monthKey = record.date.substring(0, 7) // YYYY-MM
+      const existing = monthlyMap.get(monthKey)
+      
+      // Quedarnos con el último día del mes (fecha más reciente)
+      if (!existing || record.date > existing.date) {
+        monthlyMap.set(monthKey, record)
+      }
+    })
+    
+    // Convertir a array y ordenar cronológicamente
+    return Array.from(monthlyMap.values()).sort((a, b) => 
+      a.date.localeCompare(b.date)
+    )
+  }
+
+  const allRatios = calculateRatios()
+  const data = filterMonthlyData(allRatios)
 
   return (
     <div>
