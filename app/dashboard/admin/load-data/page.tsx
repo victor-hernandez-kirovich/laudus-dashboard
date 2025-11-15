@@ -86,6 +86,7 @@ export default function LoadDataPage() {
   const [isPolling, setIsPolling] = useState(false)
   const [pollingTimer, setPollingTimer] = useState<NodeJS.Timeout | null>(null)
   const [activeJobId, setActiveJobId] = useState<string | null>(null)
+  const [showClearModal, setShowClearModal] = useState(false)
 
   // Limpiar timer de polling al desmontar
   useEffect(() => {
@@ -433,31 +434,26 @@ export default function LoadDataPage() {
     setPollingTimer(timer)
   }
 
-  const clearPersistedData = () => {
-    if (typeof window === 'undefined') return
-    
-    const confirmed = window.confirm(
-      '¿Estás seguro de que deseas limpiar todos los datos guardados? Esto reiniciará la configuración a los valores por defecto.'
-    )
-    
-    if (confirmed) {
-      // Detener polling si está activo
-      if (pollingTimer) {
-        clearInterval(pollingTimer)
-        setPollingTimer(null)
-      }
-      setIsPolling(false)
-      setActiveJobId(null)
-      setIsLoading(false)
-      
-      // Limpiar localStorage
-      localStorage.removeItem(STORAGE_KEY)
-      
-      // Resetear a valores por defecto
-      setSelectedDate(getDefaultDate())
-      setEndpoints(getDefaultEndpoints())
-      setLogs(['🔄 Estado reiniciado a valores por defecto'])
+  const handleClearData = () => {
+    // Detener polling si está activo
+    if (pollingTimer) {
+      clearInterval(pollingTimer)
+      setPollingTimer(null)
     }
+    setIsPolling(false)
+    setActiveJobId(null)
+    setIsLoading(false)
+    
+    // Limpiar localStorage
+    localStorage.removeItem(STORAGE_KEY)
+    
+    // Resetear a valores por defecto
+    setSelectedDate(getDefaultDate())
+    setEndpoints(getDefaultEndpoints())
+    setLogs(['🔄 Estado reiniciado a valores por defecto'])
+    
+    // Cerrar modal
+    setShowClearModal(false)
   }
 
   const handleLoadData = async () => {
@@ -642,7 +638,7 @@ export default function LoadDataPage() {
             {/* Botón para limpiar datos guardados */}
             <div className='flex justify-end'>
               <button
-                onClick={clearPersistedData}
+                onClick={() => setShowClearModal(true)}
                 disabled={isLoading}
                 className='text-xs text-gray-600 hover:text-red-600 underline disabled:opacity-50 disabled:cursor-not-allowed transition-colors'
                 title='Limpiar datos guardados y resetear configuración'
@@ -821,6 +817,40 @@ export default function LoadDataPage() {
           </div>
         </Card>
       </div>
+
+      {/* Modal de confirmación para limpiar datos */}
+      {showClearModal && (
+        <div className='fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4'>
+          <div className='bg-white rounded-lg shadow-xl max-w-md w-full p-6 space-y-4'>
+            <div className='flex items-start gap-3'>
+              <AlertCircle className='h-6 w-6 text-amber-500 flex-shrink-0 mt-0.5' />
+              <div className='flex-1'>
+                <h3 className='text-lg font-semibold text-gray-900 mb-2'>
+                  ¿Estás seguro de que deseas limpiar todos los datos guardados?
+                </h3>
+                <p className='text-sm text-gray-600'>
+                  Esto reiniciará la configuración a los valores por defecto.
+                </p>
+              </div>
+            </div>
+            
+            <div className='flex justify-end gap-3 pt-4'>
+              <button
+                onClick={() => setShowClearModal(false)}
+                className='px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors'
+              >
+                Cancelar
+              </button>
+              <button
+                onClick={handleClearData}
+                className='px-4 py-2 text-sm font-medium text-white bg-blue-600 rounded-lg hover:bg-blue-700 transition-colors'
+              >
+                Aceptar
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   )
 }
