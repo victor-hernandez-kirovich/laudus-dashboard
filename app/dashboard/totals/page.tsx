@@ -3,7 +3,7 @@
 import { useEffect, useState, Fragment } from 'react'
 import { Header } from '@/components/layout/Header'
 import { Card } from '@/components/ui/Card'
-import { DatePicker } from '@/components/ui/DatePicker'
+import { MonthPicker } from '@/components/ui/MonthPicker'
 import { formatCurrency, formatDate, normalizeBalanceData } from '@/lib/utils'
 import { BalanceRecord } from '@/lib/types'
 import { ChevronDown, ChevronRight, Calendar } from 'lucide-react'
@@ -77,48 +77,24 @@ export default function TotalsPage() {
       />
 
       <div className='p-4 sm:p-6 lg:p-8 space-y-6 sm:space-y-8'>
-        {/* Selector de Fechas con Calendario */}
-        <div className='bg-white rounded-lg shadow-sm border border-gray-200'>
-          <div className='p-6'>
-            <div className='flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4'>
-              <div className='flex items-center gap-2 flex-shrink-0'>
+        {/* Selector de Mes */}
+        <div className='flex justify-end'>
+          <div className='bg-white rounded-lg shadow-sm border border-gray-200 inline-flex'>
+            <div className='p-4'>
+              <div className='flex items-center gap-3'>
                 <Calendar className='h-5 w-5 text-blue-600' />
-                <label className='text-sm font-medium text-gray-700'>
-                  Seleccionar Fecha del Balance:
-                </label>
+                <span className='text-sm font-medium text-gray-700'>
+                  Seleccionar Mes:
+                </span>
+                <MonthPicker
+                  availableDates={availableDates}
+                  selectedDate={selectedDate}
+                  onDateSelect={setSelectedDate}
+                />
               </div>
-              <DatePicker
-                availableDates={availableDates}
-                selectedDate={selectedDate}
-                onDateSelect={setSelectedDate}
-              />
             </div>
-            {allData.length > 1 && (
-              <div className='mt-2 text-xs text-gray-500'>
-                {allData.length} fechas disponibles en el histórico
-              </div>
-            )}
           </div>
         </div>
-
-        {/* Summary Cards */}
-        <div className='grid grid-cols-1 gap-4 sm:gap-6 sm:grid-cols-2 lg:grid-cols-3'>
-          <Card title='Total Registros'>
-            <p className='text-3xl font-bold text-gray-900'>{data.recordCount}</p>
-          </Card>
-          <Card title='Fecha de Datos'>
-            <p className='text-3xl font-bold text-gray-900'>
-              {data.date ? data.date.split('-').reverse().join('/') : 'N/A'}
-            </p>
-          </Card>
-          <Card title='Última Actualización'>
-            <p className='text-lg font-bold text-gray-900'>
-              {data.insertedAt ? new Date(data.insertedAt).toLocaleTimeString('es-CL', { hour: '2-digit', minute: '2-digit' }) : 'N/A'}
-            </p>
-          </Card>
-        </div>
-
-        {/* Charts removed as requested */}
 
         {/* Data Table - 6 COLUMNAS (solo datos de DB) */}
         <Card title='Detalle de Cuentas' subtitle={'Total: ' + data.recordCount + ' registros'}>

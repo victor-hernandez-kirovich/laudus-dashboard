@@ -3,10 +3,10 @@
 import { useState, useEffect, Fragment } from 'react'
 import { Header } from '@/components/layout/Header'
 import { Card } from '@/components/ui/Card'
-import { DatePicker } from '@/components/ui/DatePicker'
+import { MonthPicker } from '@/components/ui/MonthPicker'
 // Charts removed per request
 import { formatCurrency, formatDate, normalizeBalanceData } from '@/lib/utils'
-import { Activity, TrendingUp, Calendar, ChevronDown, ChevronRight } from 'lucide-react'
+import { Calendar, ChevronDown, ChevronRight } from 'lucide-react'
 
 export default function Balance8ColumnsPage() {
   const [allData, setAllData] = useState<any[]>([])
@@ -93,68 +93,24 @@ export default function Balance8ColumnsPage() {
       />
 
       <div className='p-8 space-y-8'>
-        {/* Selector de Fechas con Calendario */}
-        <div className='bg-white rounded-lg shadow-sm border border-gray-200'>
-          <div className='p-6'>
-            <div className='flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4'>
-              <div className='flex items-center gap-2 flex-shrink-0'>
+        {/* Selector de Mes */}
+        <div className='flex justify-end'>
+          <div className='bg-white rounded-lg shadow-sm border border-gray-200 inline-flex'>
+            <div className='p-4'>
+              <div className='flex items-center gap-3'>
                 <Calendar className='h-5 w-5 text-blue-600' />
-                <label className='text-sm font-medium text-gray-700'>
-                  Seleccionar Fecha del Balance:
-                </label>
+                <span className='text-sm font-medium text-gray-700'>
+                  Seleccionar Mes:
+                </span>
+                <MonthPicker
+                  availableDates={availableDates}
+                  selectedDate={selectedDate}
+                  onDateSelect={setSelectedDate}
+                />
               </div>
-              <DatePicker
-                availableDates={availableDates}
-                selectedDate={selectedDate}
-                onDateSelect={setSelectedDate}
-              />
             </div>
-            {allData.length > 1 && (
-              <div className='mt-2 text-xs text-gray-500'>
-                {allData.length} fechas disponibles en el histórico
-              </div>
-            )}
           </div>
         </div>
-
-        {/* Summary Cards */}
-        <div className='grid grid-cols-1 gap-6 md:grid-cols-3'>
-          <Card>
-            <div className='flex items-center justify-between'>
-              <div>
-                <p className='text-sm font-medium text-gray-600'>Total Registros</p>
-                <p className='text-2xl font-bold text-gray-900 mt-1'>{records.length}</p>
-              </div>
-              <Activity className='h-8 w-8 text-yellow-500' />
-            </div>
-          </Card>
-
-          <Card>
-            <div className='flex items-center justify-between'>
-              <div>
-                <p className='text-sm font-medium text-gray-600'>Fecha de Datos</p>
-                <p className='text-2xl font-bold text-gray-900 mt-1'>
-                  {latestRecord?.date ? latestRecord.date.split('-').reverse().join('/') : 'N/A'}
-                </p>
-              </div>
-              <Calendar className='h-8 w-8 text-blue-500' />
-            </div>
-          </Card>
-
-          <Card>
-            <div className='flex items-center justify-between'>
-              <div>
-                <p className='text-sm font-medium text-gray-600'>Última Actualización</p>
-                <p className='text-lg font-bold text-gray-900 mt-1'>
-                  {latestRecord?.insertedAt ? new Date(latestRecord.insertedAt).toLocaleTimeString('es-CL', { hour: '2-digit', minute: '2-digit' }) : 'N/A'}
-                </p>
-              </div>
-              <TrendingUp className='h-8 w-8 text-purple-500' />
-            </div>
-          </Card>
-        </div>
-
-        {/* Charts removed as requested */}
 
         {/* Data Table - 10 COLUMNAS TOTALES (solo datos de DB) */}
         <Card title='Datos del Balance 8 Columns' subtitle={`Total: ${records.length} registros`}>
