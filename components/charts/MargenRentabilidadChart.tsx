@@ -52,12 +52,12 @@ export function MargenRentabilidadChart({ data }: MargenRentabilidadChartProps) 
               <span className='font-bold text-blue-700'>{data.margenNeto.toFixed(2)}%</span>
             </div>
             <div className='flex items-center justify-between gap-4'>
-              <span className='text-green-600'>Ingresos:</span>
-              <span className='font-semibold'>{formatCurrency(data.ingresos)}</span>
+              <span className='text-green-700 font-medium'>Ingresos:</span>
+              <span className='font-bold text-green-800'>{formatCurrency(data.ingresos)}</span>
             </div>
             <div className='flex items-center justify-between gap-4'>
-              <span className='text-red-600'>Gastos:</span>
-              <span className='font-semibold'>{formatCurrency(data.gastos)}</span>
+              <span className='text-red-700 font-medium'>Gastos:</span>
+              <span className='font-bold text-red-800'>{formatCurrency(data.gastos)}</span>
             </div>
             <div className='border-t pt-1 mt-1 flex items-center justify-between gap-4'>
               <span className='text-gray-700 font-medium'>Utilidad Neta:</span>
