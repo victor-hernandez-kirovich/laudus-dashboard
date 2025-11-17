@@ -18,9 +18,12 @@ interface MargenRentabilidadChartProps {
   data: Array<{
     date: string
     margenNeto: number
+    margenOperacional: number
     ingresos: number
     gastos: number
+    gastosOperacionales: number
     utilidadNeta: number
+    utilidadOperacional: number
   }>
 }
 
@@ -45,23 +48,39 @@ export function MargenRentabilidadChart({ data }: MargenRentabilidadChartProps) 
       const data = payload[0].payload
       return (
         <div className='bg-white p-4 rounded-lg shadow-lg border border-gray-200'>
-          <p className='font-semibold text-gray-900 mb-2'>{data.dateFormatted}</p>
-          <div className='space-y-1 text-sm'>
-            <div className='flex items-center justify-between gap-4'>
-              <span className='text-blue-600 font-medium'>Margen Neto:</span>
-              <span className='font-bold text-blue-700'>{data.margenNeto.toFixed(2)}%</span>
+          <p className='font-semibold text-gray-900 mb-3'>{data.dateFormatted}</p>
+          <div className='space-y-2 text-sm'>
+            <div className='pb-2 border-b border-gray-200'>
+              <div className='flex items-center justify-between gap-4'>
+                <span className='text-blue-600 font-medium'>Margen Neto:</span>
+                <span className='font-bold text-blue-700'>{data.margenNeto.toFixed(2)}%</span>
+              </div>
+              <div className='flex items-center justify-between gap-4 mt-1'>
+                <span className='text-green-600 font-medium'>Margen Operacional:</span>
+                <span className='font-bold text-green-700'>{data.margenOperacional.toFixed(2)}%</span>
+              </div>
             </div>
             <div className='flex items-center justify-between gap-4'>
               <span className='text-green-700 font-medium'>Ingresos:</span>
               <span className='font-bold text-green-800'>{formatCurrency(data.ingresos)}</span>
             </div>
             <div className='flex items-center justify-between gap-4'>
-              <span className='text-red-700 font-medium'>Gastos:</span>
+              <span className='text-orange-600 font-medium'>Gastos Operacionales:</span>
+              <span className='font-bold text-orange-700'>{formatCurrency(data.gastosOperacionales)}</span>
+            </div>
+            <div className='flex items-center justify-between gap-4'>
+              <span className='text-red-700 font-medium'>Gastos Totales:</span>
               <span className='font-bold text-red-800'>{formatCurrency(data.gastos)}</span>
             </div>
-            <div className='border-t pt-1 mt-1 flex items-center justify-between gap-4'>
-              <span className='text-gray-700 font-medium'>Utilidad Neta:</span>
-              <span className='font-bold text-gray-900'>{formatCurrency(data.utilidadNeta)}</span>
+            <div className='border-t pt-2 mt-2 space-y-1'>
+              <div className='flex items-center justify-between gap-4'>
+                <span className='text-green-700 font-medium'>Utilidad Operacional:</span>
+                <span className='font-bold text-green-800'>{formatCurrency(data.utilidadOperacional)}</span>
+              </div>
+              <div className='flex items-center justify-between gap-4'>
+                <span className='text-gray-700 font-medium'>Utilidad Neta:</span>
+                <span className='font-bold text-gray-900'>{formatCurrency(data.utilidadNeta)}</span>
+              </div>
             </div>
           </div>
         </div>
@@ -111,29 +130,69 @@ export function MargenRentabilidadChart({ data }: MargenRentabilidadChartProps) 
               dot={{ fill: '#3b82f6', r: 5 }}
               activeDot={{ r: 7 }}
             />
+            <Line
+              type='monotone'
+              dataKey='margenOperacional'
+              stroke='#10b981'
+              strokeWidth={3}
+              name='Margen Operacional (%)'
+              dot={{ fill: '#10b981', r: 5 }}
+              activeDot={{ r: 7 }}
+            />
           </LineChart>
         </ResponsiveContainer>
       </div>
 
-      {/* Leyenda adicional */}
+      {/* Leyenda adicional con estadísticas de ambos márgenes */}
       <div className='mt-4 pt-4 border-t border-gray-200'>
-        <div className='grid grid-cols-1 sm:grid-cols-3 gap-4 text-sm'>
-          <div className='text-center'>
-            <div className='text-gray-600'>Promedio</div>
-            <div className='text-lg font-bold text-blue-600'>
-              {(chartData.reduce((sum, item) => sum + item.margenNeto, 0) / chartData.length).toFixed(2)}%
+        <div className='grid grid-cols-1 lg:grid-cols-2 gap-6'>
+          {/* Estadísticas Margen Neto */}
+          <div>
+            <h4 className='text-sm font-semibold text-blue-700 mb-3'>Margen Neto</h4>
+            <div className='grid grid-cols-3 gap-4 text-sm'>
+              <div className='text-center'>
+                <div className='text-gray-600'>Promedio</div>
+                <div className='text-lg font-bold text-blue-600'>
+                  {(chartData.reduce((sum, item) => sum + item.margenNeto, 0) / chartData.length).toFixed(2)}%
+                </div>
+              </div>
+              <div className='text-center'>
+                <div className='text-gray-600'>Máximo</div>
+                <div className='text-lg font-bold text-green-600'>
+                  {Math.max(...chartData.map(item => item.margenNeto)).toFixed(2)}%
+                </div>
+              </div>
+              <div className='text-center'>
+                <div className='text-gray-600'>Mínimo</div>
+                <div className='text-lg font-bold text-orange-600'>
+                  {Math.min(...chartData.map(item => item.margenNeto)).toFixed(2)}%
+                </div>
+              </div>
             </div>
           </div>
-          <div className='text-center'>
-            <div className='text-gray-600'>Máximo</div>
-            <div className='text-lg font-bold text-green-600'>
-              {Math.max(...chartData.map(item => item.margenNeto)).toFixed(2)}%
-            </div>
-          </div>
-          <div className='text-center'>
-            <div className='text-gray-600'>Mínimo</div>
-            <div className='text-lg font-bold text-orange-600'>
-              {Math.min(...chartData.map(item => item.margenNeto)).toFixed(2)}%
+          
+          {/* Estadísticas Margen Operacional */}
+          <div>
+            <h4 className='text-sm font-semibold text-green-700 mb-3'>Margen Operacional</h4>
+            <div className='grid grid-cols-3 gap-4 text-sm'>
+              <div className='text-center'>
+                <div className='text-gray-600'>Promedio</div>
+                <div className='text-lg font-bold text-blue-600'>
+                  {(chartData.reduce((sum, item) => sum + item.margenOperacional, 0) / chartData.length).toFixed(2)}%
+                </div>
+              </div>
+              <div className='text-center'>
+                <div className='text-gray-600'>Máximo</div>
+                <div className='text-lg font-bold text-green-600'>
+                  {Math.max(...chartData.map(item => item.margenOperacional)).toFixed(2)}%
+                </div>
+              </div>
+              <div className='text-center'>
+                <div className='text-gray-600'>Mínimo</div>
+                <div className='text-lg font-bold text-orange-600'>
+                  {Math.min(...chartData.map(item => item.margenOperacional)).toFixed(2)}%
+                </div>
+              </div>
             </div>
           </div>
         </div>

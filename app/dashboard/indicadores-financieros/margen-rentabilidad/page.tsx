@@ -10,9 +10,12 @@ import { MargenRentabilidadChart } from '@/components/charts/MargenRentabilidadC
 interface MargenData {
   date: string
   margenNeto: number
+  margenOperacional: number
   ingresos: number
   gastos: number
+  gastosOperacionales: number
   utilidadNeta: number
+  utilidadOperacional: number
 }
 
 export default function MargenRentabilidadPage() {
@@ -45,7 +48,7 @@ export default function MargenRentabilidadPage() {
     fetchData()
   }, [])
 
-  // Calcular Margen de Rentabilidad Neta para cada fecha
+  // Calcular Márgenes de Rentabilidad (Neto y Operacional) para cada fecha
   const calculateMargenRentabilidad = (): MargenData[] => {
     return allData.map(record => {
       const records = record.data || []
@@ -53,13 +56,20 @@ export default function MargenRentabilidadPage() {
       // Buscar la fila "Sumas" que contiene los totales
       const filaSumas = records.find((r: any) => r.accountName === "Sumas")
       
+      // Buscar cuentas específicas para Margen Operacional
+      const cuenta31 = records.find((r: any) => r.accountNumber === "31") // Costo de Explotación
+      const cuenta32 = records.find((r: any) => r.accountNumber === "32") // Gastos Operacionales
+      
       if (!filaSumas) {
         return {
           date: record.date,
           margenNeto: 0,
+          margenOperacional: 0,
           ingresos: 0,
           gastos: 0,
-          utilidadNeta: 0
+          gastosOperacionales: 0,
+          utilidadNeta: 0,
+          utilidadOperacional: 0
         }
       }
       
@@ -70,12 +80,22 @@ export default function MargenRentabilidadPage() {
       // Calcular Margen Neto = (Utilidad Neta / Ingresos) * 100
       const margenNeto = ingresos > 0 ? (utilidadNeta / ingresos) * 100 : 0
       
+      // Calcular Margen Operacional = (Ingresos - Gastos Operacionales) / Ingresos * 100
+      const costoExplotacion = cuenta31?.expenses || 0
+      const gastosOperacionales = cuenta32?.expenses || 0
+      const totalGastosOperacionales = costoExplotacion + gastosOperacionales
+      const utilidadOperacional = ingresos - totalGastosOperacionales
+      const margenOperacional = ingresos > 0 ? (utilidadOperacional / ingresos) * 100 : 0
+      
       return {
         date: record.date,
         margenNeto: margenNeto,
+        margenOperacional: margenOperacional,
         ingresos: ingresos,
         gastos: gastos,
-        utilidadNeta: utilidadNeta
+        gastosOperacionales: totalGastosOperacionales,
+        utilidadNeta: utilidadNeta,
+        utilidadOperacional: utilidadOperacional
       }
     })
   }
@@ -119,12 +139,19 @@ export default function MargenRentabilidadPage() {
   const latestMargen = margenData[0]
   const previousMargen = margenData.length > 1 ? margenData[1] : null
   
-  // Calcular cambio vs mes anterior
+  // Calcular cambio vs mes anterior - Margen Neto
   const cambioVsMesAnterior = previousMargen 
     ? latestMargen.margenNeto - previousMargen.margenNeto 
     : 0
   
   const tendencia = cambioVsMesAnterior > 0 ? 'up' : cambioVsMesAnterior < 0 ? 'down' : 'neutral'
+
+  // Calcular cambio vs mes anterior - Margen Operacional
+  const cambioOperacionalVsMesAnterior = previousMargen 
+    ? latestMargen.margenOperacional - previousMargen.margenOperacional 
+    : 0
+  
+  const tendenciaOperacional = cambioOperacionalVsMesAnterior > 0 ? 'up' : cambioOperacionalVsMesAnterior < 0 ? 'down' : 'neutral'
 
   // Determinar color del gauge según el margen
   const getMargenColor = (margen: number): string => {
@@ -152,8 +179,8 @@ export default function MargenRentabilidadPage() {
       />
 
       <div className='p-4 sm:p-6 lg:p-8 space-y-6 sm:space-y-8'>
-        {/* KPI Card Principal + Gauge */}
-        <div className='grid grid-cols-1 lg:grid-cols-3 gap-6'>
+        {/* KPI Cards + Gauges - Margen Neto y Operacional */}
+        <div className='grid grid-cols-1 lg:grid-cols-2 gap-6'>
           {/* Margen Neto Actual - Gauge Style */}
           <Card title={`Margen Neto - ${formatSpanishDate(latestMargen.date)}`} className='lg:col-span-1'>
             <div className='flex flex-col items-center justify-center py-8'>
@@ -225,8 +252,89 @@ export default function MargenRentabilidadPage() {
             </div>
           </Card>
 
-          {/* Desglose Financiero */}
-          <Card title='Desglose del Mes Actual' className='lg:col-span-2'>
+          {/* Margen Operacional - Gauge Style */}
+          <Card title={`Margen Operacional - ${formatSpanishDate(latestMargen.date)}`} className='lg:col-span-1'>
+            <div className='flex flex-col items-center justify-center py-8'>
+              {/* Gauge circular simulado */}
+              <div className='relative w-48 h-48 mb-4'>
+                <svg className='w-full h-full transform -rotate-90' viewBox='0 0 100 100'>
+                  {/* Fondo del círculo */}
+                  <circle
+                    cx='50'
+                    cy='50'
+                    r='40'
+                    fill='none'
+                    stroke='#e5e7eb'
+                    strokeWidth='8'
+                  />
+                  {/* Progreso del círculo */}
+                  <circle
+                    cx='50'
+                    cy='50'
+                    r='40'
+                    fill='none'
+                    stroke={getMargenColor(latestMargen.margenOperacional)}
+                    strokeWidth='8'
+                    strokeDasharray={`${(latestMargen.margenOperacional / 100) * 251.2} 251.2`}
+                    strokeLinecap='round'
+                  />
+                </svg>
+                {/* Texto central */}
+                <div className='absolute inset-0 flex flex-col items-center justify-center'>
+                  <div className='text-5xl font-bold' style={{ color: getMargenColor(latestMargen.margenOperacional) }}>
+                    {latestMargen.margenOperacional.toFixed(1)}%
+                  </div>
+                  <div className='text-sm font-semibold mt-2' style={{ color: getMargenColor(latestMargen.margenOperacional) }}>
+                    {getMargenLabel(latestMargen.margenOperacional)}
+                  </div>
+                </div>
+              </div>
+
+              {/* Comparación con mes anterior */}
+              {previousMargen && (
+                <div className='flex items-center gap-2 mt-4'>
+                  {tendenciaOperacional === 'up' && (
+                    <>
+                      <TrendingUp className='h-5 w-5 text-green-600' />
+                      <span className='text-green-600 font-semibold'>
+                        +{cambioOperacionalVsMesAnterior.toFixed(2)}%
+                      </span>
+                    </>
+                  )}
+                  {tendenciaOperacional === 'down' && (
+                    <>
+                      <TrendingDown className='h-5 w-5 text-red-600' />
+                      <span className='text-red-600 font-semibold'>
+                        {cambioOperacionalVsMesAnterior.toFixed(2)}%
+                      </span>
+                    </>
+                  )}
+                  {tendenciaOperacional === 'neutral' && (
+                    <>
+                      <Minus className='h-5 w-5 text-gray-600' />
+                      <span className='text-gray-600 font-semibold'>
+                        Sin cambio
+                      </span>
+                    </>
+                  )}
+                  <span className='text-sm text-gray-600'>vs mes anterior</span>
+                </div>
+              )}
+
+              {/* Nota explicativa */}
+              <div className='mt-4 pt-4 border-t border-gray-200 w-full'>
+                <p className='text-xs text-center text-gray-500'>
+                  Solo incluye gastos operacionales (cuentas 31 y 32)
+                </p>
+              </div>
+            </div>
+          </Card>
+        </div>
+
+        {/* Desglose Financiero Comparativo */}
+        <div className='grid grid-cols-1 lg:grid-cols-2 gap-6'>
+          {/* Desglose Margen Neto */}
+          <Card title='Desglose Margen Neto' className='lg:col-span-1'>
             <div className='space-y-6 py-4'>
               {/* Ingresos */}
               <div className='flex items-center justify-between pb-4 border-b border-gray-200'>
@@ -290,6 +398,73 @@ export default function MargenRentabilidadPage() {
               </div>
             </div>
           </Card>
+
+          {/* Desglose Margen Operacional */}
+          <Card title='Desglose Margen Operacional' className='lg:col-span-1'>
+            <div className='space-y-6 py-4'>
+              {/* Ingresos */}
+              <div className='flex items-center justify-between pb-4 border-b border-gray-200'>
+                <div className='flex items-center gap-3'>
+                  <div className='w-10 h-10 bg-green-100 rounded-lg flex items-center justify-center'>
+                    <DollarSign className='h-6 w-6 text-green-600' />
+                  </div>
+                  <div>
+                    <div className='text-sm text-gray-600'>Ingresos Totales</div>
+                    <div className='text-2xl font-bold text-green-600'>
+                      {formatCurrency(latestMargen.ingresos)}
+                    </div>
+                  </div>
+                </div>
+                <div className='text-right'>
+                  <div className='text-sm text-gray-600'>100%</div>
+                  <div className='text-xs text-gray-500'>del total</div>
+                </div>
+              </div>
+
+              {/* Gastos Operacionales */}
+              <div className='flex items-center justify-between pb-4 border-b border-gray-200'>
+                <div className='flex items-center gap-3'>
+                  <div className='w-10 h-10 bg-orange-100 rounded-lg flex items-center justify-center'>
+                    <TrendingDown className='h-6 w-6 text-orange-600' />
+                  </div>
+                  <div>
+                    <div className='text-sm text-gray-600'>Gastos Operacionales</div>
+                    <div className='text-xs text-gray-500'>(Cuentas 31 y 32)</div>
+                    <div className='text-2xl font-bold text-orange-600'>
+                      {formatCurrency(latestMargen.gastosOperacionales)}
+                    </div>
+                  </div>
+                </div>
+                <div className='text-right'>
+                  <div className='text-sm text-gray-600'>
+                    {((latestMargen.gastosOperacionales / latestMargen.ingresos) * 100).toFixed(1)}%
+                  </div>
+                  <div className='text-xs text-gray-500'>del total</div>
+                </div>
+              </div>
+
+              {/* Utilidad Operacional */}
+              <div className='flex items-center justify-between pt-2'>
+                <div className='flex items-center gap-3'>
+                  <div className='w-10 h-10 bg-green-100 rounded-lg flex items-center justify-center'>
+                    <TrendingUp className='h-6 w-6 text-green-600' />
+                  </div>
+                  <div>
+                    <div className='text-sm text-gray-600 font-semibold'>Utilidad Operacional</div>
+                    <div className='text-3xl font-bold text-green-600'>
+                      {formatCurrency(latestMargen.utilidadOperacional)}
+                    </div>
+                  </div>
+                </div>
+                <div className='text-right'>
+                  <div className='text-lg font-bold' style={{ color: getMargenColor(latestMargen.margenOperacional) }}>
+                    {latestMargen.margenOperacional.toFixed(2)}%
+                  </div>
+                  <div className='text-xs text-gray-500'>margen operacional</div>
+                </div>
+              </div>
+            </div>
+          </Card>
         </div>
 
         {/* Gráfico de Evolución */}
@@ -297,21 +472,55 @@ export default function MargenRentabilidadPage() {
           <MargenRentabilidadChart data={margenData.slice(0, 12)} />
         )}
 
-        {/* Interpretación */}
-        <Card title='¿Qué es el Margen de Rentabilidad Neta?'>
-          <div className='text-sm text-gray-700 space-y-4'>
-            <p>
-              El <strong>Margen de Rentabilidad Neta</strong> (o Margen Neto) es un indicador financiero que muestra 
-              qué porcentaje de las ventas se convierte finalmente en ganancia después de descontar todos los gastos.
-            </p>
-            
-            <div className='bg-blue-50 border-l-4 border-blue-500 p-4 my-4'>
-              <p className='font-semibold text-blue-900 mb-2'>Fórmula:</p>
-              <p className='text-blue-800 font-mono text-sm'>
-                Margen Neto = (Utilidad Neta / Ingresos Totales) × 100
+        {/* Interpretación - Ambos Márgenes */}
+        <Card title='¿Qué son los Márgenes de Rentabilidad?'>
+          <div className='text-sm text-gray-700 space-y-6'>
+            {/* Margen Neto */}
+            <div>
+              <h3 className='text-lg font-semibold text-blue-700 mb-2'>Margen de Rentabilidad Neta</h3>
+              <p>
+                El <strong>Margen Neto</strong> muestra qué porcentaje de las ventas se convierte finalmente en ganancia 
+                después de descontar <strong>todos los gastos</strong> (operacionales y no operacionales).
               </p>
-              <p className='text-blue-800 font-mono text-sm mt-1'>
-                Utilidad Neta = Ingresos - Gastos
+              
+              <div className='bg-blue-50 border-l-4 border-blue-500 p-4 my-3'>
+                <p className='font-semibold text-blue-900 mb-2'>Fórmula:</p>
+                <p className='text-blue-800 font-mono text-sm'>
+                  Margen Neto = (Utilidad Neta / Ingresos Totales) × 100
+                </p>
+                <p className='text-blue-800 font-mono text-sm mt-1'>
+                  Utilidad Neta = Ingresos - Todos los Gastos
+                </p>
+              </div>
+            </div>
+
+            {/* Margen Operacional */}
+            <div className='pt-4 border-t border-gray-200'>
+              <h3 className='text-lg font-semibold text-green-700 mb-2'>Margen Operacional</h3>
+              <p>
+                El <strong>Margen Operacional</strong> muestra qué porcentaje de las ventas se convierte en ganancia 
+                después de descontar <strong>solo los gastos operacionales</strong> (cuentas 31: Costo de Explotación y 32: Gastos Operacionales), 
+                excluyendo gastos financieros y otros gastos no operacionales (cuenta 34).
+              </p>
+              
+              <div className='bg-green-50 border-l-4 border-green-500 p-4 my-3'>
+                <p className='font-semibold text-green-900 mb-2'>Fórmula:</p>
+                <p className='text-green-800 font-mono text-sm'>
+                  Margen Operacional = (Utilidad Operacional / Ingresos Totales) × 100
+                </p>
+                <p className='text-green-800 font-mono text-sm mt-1'>
+                  Utilidad Operacional = Ingresos - Gastos Operacionales (Cuentas 31 + 32)
+                </p>
+              </div>
+            </div>
+
+            {/* Diferencia clave */}
+            <div className='bg-amber-50 border-l-4 border-amber-500 p-4'>
+              <p className='font-semibold text-amber-900 mb-2'>Diferencia Clave:</p>
+              <p className='text-amber-800 text-sm'>
+                La diferencia entre ambos márgenes muestra el impacto de los <strong>gastos no operacionales</strong> 
+                (principalmente gastos financieros). Un Margen Operacional significativamente mayor al Margen Neto 
+                indica que la empresa tiene altos costos financieros o gastos extraordinarios.
               </p>
             </div>
 
