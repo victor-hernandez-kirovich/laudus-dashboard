@@ -9,7 +9,7 @@ interface HeaderProps {
 
 export function Header({ title, subtitle }: HeaderProps) {
   return (
-    <header className="bg-white border-b border-gray-200 sticky top-0 z-10">
+    <header className="bg-white border-b border-gray-200 sticky top-0 z-30">
       <div className="flex h-16 items-center justify-between px-4 sm:px-6 lg:px-8">
         {/* Title Section */}
         <div className="flex-1 min-w-0 pl-12 lg:pl-0">
