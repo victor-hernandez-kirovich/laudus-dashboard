@@ -30,24 +30,23 @@ export default function EstructuraFinancieraPage() {
 
   const calculateEstructuraFinanciera = () => {
     if (!allData || allData.length === 0) return []
-    
-    console.log('=== TABLA DE ACTIVOS Y PASIVOS POR FECHA ===')
-    
+
+
     // Crear tabla con todos los registros
     const tablaResumen = allData.map((record: any) => {
       const records = record.data || []
-      
+
       // Buscar cuenta 1 (ACTIVO)
       const cuentaActivo = records.find((r: any) => r.accountNumber === "1")
       // Buscar cuenta 2 (PASIVO)
       const cuentaPasivo = records.find((r: any) => r.accountNumber === "2")
-      
+
       const activos = cuentaActivo?.assets || 0
       const pasivos = cuentaPasivo?.liabilities || 0
       const patrimonio = activos - pasivos
       const endeudamiento = activos > 0 ? ((pasivos / activos) * 100).toFixed(2) : 0
       const autonomia = activos > 0 ? ((patrimonio / activos) * 100).toFixed(2) : 0
-      
+
       return {
         Fecha: record.date,
         'Activos (columna)': activos.toLocaleString('es-CL'),
@@ -58,18 +57,18 @@ export default function EstructuraFinancieraPage() {
         'Suma %': (parseFloat(endeudamiento.toString()) + parseFloat(autonomia.toString())).toFixed(2)
       }
     })
-    
+
     console.table(tablaResumen)
-    
+
     return allData.map((record: any, index: number) => {
       const records = record.data || []
-      
+
       // La estructura contable básica es: Activo = Pasivo + Patrimonio
       // Debemos buscar la fila "Sumas" que contiene los totales correctos
-      
+
       // Buscar la fila "Sumas" (accountName === "Sumas")
       const filaSumas = records.find((r: any) => r.accountName === "Sumas")
-      
+
       if (!filaSumas) {
         console.warn('No se encontró la fila "Sumas" para la fecha:', record.date)
         return {
@@ -81,40 +80,19 @@ export default function EstructuraFinancieraPage() {
           patrimonio: 0
         }
       }
-      
+
       const activoTotal = filaSumas.assets || 0
       const pasivoTotal = filaSumas.liabilities || 0
-      
-      // DEBUG: Ver TODOS los campos de la fila "Sumas"
-      if (index === 0) {
-        console.log('=== FILA "SUMAS" ===')
-        console.log('Todos los campos:', filaSumas)
-        
-        console.log('=== RESUMEN COLUMNAS ===')
-        console.log('FILA SUMAS:')
-        console.log('  - debit:', filaSumas?.debit)
-        console.log('  - credit:', filaSumas?.credit)
-        console.log('  - debtorBalance:', filaSumas?.debtorBalance)
-        console.log('  - creditorBalance:', filaSumas?.creditorBalance)
-        console.log('  - assets:', filaSumas?.assets)
-        console.log('  - liabilities:', filaSumas?.liabilities)
-      }
-      
+
       // Calcular Patrimonio = Activo Total - Pasivo Total
       const patrimonio = activoTotal - pasivoTotal
-      
-      if (index === 0) {
-        console.log('Valores finales:', { activoTotal, pasivoTotal, patrimonio })
-        console.log('Suma Pasivo + Patrimonio:', pasivoTotal + patrimonio)
-        console.log('¿Cuadra?', (pasivoTotal + patrimonio) === activoTotal)
-      }
-      
+
       // Calcular porcentajes
       const endeudamiento = activoTotal > 0 ? (pasivoTotal / activoTotal) * 100 : 0
       const autonomia = activoTotal > 0 ? (patrimonio / activoTotal) * 100 : 0
-      
-      return { 
-        date: record.date, 
+
+      return {
+        date: record.date,
         endeudamiento,
         autonomia,
         activoTotal,
@@ -126,21 +104,21 @@ export default function EstructuraFinancieraPage() {
 
   const filterMonthlyData = (data: any[]) => {
     if (!data || data.length === 0) return []
-    
+
     const monthlyMap = new Map()
-    
+
     data.forEach(record => {
       const monthKey = record.date.substring(0, 7) // YYYY-MM
       const existing = monthlyMap.get(monthKey)
-      
+
       // Quedarnos con el último día del mes (fecha más reciente)
       if (!existing || record.date > existing.date) {
         monthlyMap.set(monthKey, record)
       }
     })
-    
+
     // Convertir a array y ordenar cronológicamente
-    return Array.from(monthlyMap.values()).sort((a, b) => 
+    return Array.from(monthlyMap.values()).sort((a, b) =>
       a.date.localeCompare(b.date)
     )
   }

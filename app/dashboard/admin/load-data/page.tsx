@@ -28,22 +28,22 @@ const STORAGE_KEY = 'laudus-load-data-state'
 // Función para cargar estado desde localStorage
 const loadPersistedState = (): Partial<PersistedState> | null => {
   if (typeof window === 'undefined') return null
-  
+
   try {
     const stored = localStorage.getItem(STORAGE_KEY)
     if (!stored) return null
-    
+
     const parsed: PersistedState = JSON.parse(stored)
-    
+
     // Validar que no sea muy antiguo (más de 7 días)
     const lastUpdated = new Date(parsed.lastUpdated)
     const daysSinceUpdate = (Date.now() - lastUpdated.getTime()) / (1000 * 60 * 60 * 24)
-    
+
     if (daysSinceUpdate > 7) {
       localStorage.removeItem(STORAGE_KEY)
       return null
     }
-    
+
     return parsed
   } catch (error) {
     console.error('Error loading persisted state:', error)
@@ -55,7 +55,7 @@ const loadPersistedState = (): Partial<PersistedState> | null => {
 // Función para guardar estado en localStorage
 const savePersistedState = (state: PersistedState) => {
   if (typeof window === 'undefined') return
-  
+
   try {
     localStorage.setItem(STORAGE_KEY, JSON.stringify(state))
   } catch (error) {
@@ -65,20 +65,20 @@ const savePersistedState = (state: PersistedState) => {
 
 export default function LoadDataPage() {
   const [isMounted, setIsMounted] = useState(false)
-  
+
   // Valores por defecto (usados en el servidor)
   const getDefaultDate = () => {
     const yesterday = new Date()
     yesterday.setDate(yesterday.getDate() - 1)
     return yesterday.toISOString().split('T')[0]
   }
-  
+
   const getDefaultEndpoints = (): EndpointStatus[] => [
     { name: 'totals', label: 'Balance Totals', enabled: true, status: 'pending' },
     { name: 'standard', label: 'Balance Standard', enabled: true, status: 'pending' },
     { name: '8Columns', label: 'Balance 8 Columns', enabled: true, status: 'pending' }
   ]
-  
+
   const [selectedDate, setSelectedDate] = useState<string>(getDefaultDate())
   const [endpoints, setEndpoints] = useState<EndpointStatus[]>(getDefaultEndpoints())
   const [isLoading, setIsLoading] = useState(false)
@@ -101,11 +101,7 @@ export default function LoadDataPage() {
   useEffect(() => {
     setIsMounted(true)
     const persisted = loadPersistedState()
-    
-    console.log('[DEBUG] Estado persistido cargado:', persisted)
-    console.log('[DEBUG] activeJobId presente?', persisted?.activeJobId ? 'SÍ: ' + persisted.activeJobId : 'NO - undefined o null')
-    console.log('[DEBUG] logs.length:', persisted?.logs?.length || 0)
-    
+
     if (persisted) {
       if (persisted.selectedDate) {
         setSelectedDate(persisted.selectedDate)
@@ -115,25 +111,16 @@ export default function LoadDataPage() {
       }
       // Restaurar logs desde localStorage
       if (persisted.logs && persisted.logs.length > 0) {
-        console.log('[DEBUG] Restaurando logs desde localStorage:', persisted.logs.length, 'logs')
         setLogs(persisted.logs)
-      } else {
-        console.log('[DEBUG] No hay logs en localStorage para restaurar')
       }
       // Si hay un jobId activo, restaurar el polling
       if (persisted.activeJobId) {
-        console.log('[DEBUG] Restaurando jobId activo:', persisted.activeJobId)
         setActiveJobId(persisted.activeJobId)
         // Mostrar mensaje de carga mientras se recuperan logs desde MongoDB
         addLog('🔄 Recuperando estado del proceso desde el servidor...')
         // Intentar recuperar el job desde MongoDB
         fetchJobStatusAndResume(persisted.activeJobId)
-      } else {
-        console.log('[DEBUG] ⚠️ NO HAY activeJobId - El recuadro de logs NO se mostrará')
-        console.log('[DEBUG] Para ver logs, debes INICIAR UN NUEVO PROCESO después de limpiar datos guardados')
       }
-    } else {
-      console.log('[DEBUG] No hay estado persistido')
     }
   }, [])
 
@@ -169,9 +156,9 @@ export default function LoadDataPage() {
         if (jobResult) {
           return {
             ...e,
-            status: jobResult.status === 'success' ? 'success' : 
-                    jobResult.status === 'error' ? 'error' :
-                    'loading',
+            status: jobResult.status === 'success' ? 'success' :
+              jobResult.status === 'error' ? 'error' :
+                'loading',
             records: jobResult.records,
             error: jobResult.error
           }
@@ -182,7 +169,7 @@ export default function LoadDataPage() {
       // Si el job no está completado, reanudar polling
       if (job.status === 'running' || job.status === 'pending') {
         addLog('🔄 Reanudando monitoreo del proceso...')
-        const enabledEndpoints = endpoints.filter(e => 
+        const enabledEndpoints = endpoints.filter(e =>
           job.endpoints.includes(e.name)
         )
         startPollingForJob(jobId, job.date, enabledEndpoints)
@@ -206,7 +193,7 @@ export default function LoadDataPage() {
   // Efecto para persistir estado cuando cambia (solo después de montar)
   useEffect(() => {
     if (!isMounted) return
-    
+
     // Siempre guardar el estado completo incluyendo logs
     const state: PersistedState = {
       selectedDate,
@@ -225,13 +212,13 @@ export default function LoadDataPage() {
 
   const toggleEndpoint = (name: string) => {
     if (isLoading) return
-    setEndpoints(prev => 
+    setEndpoints(prev =>
       prev.map(e => e.name === name ? { ...e, enabled: !e.enabled } : e)
     )
   }
 
   const resetStatuses = () => {
-    setEndpoints(prev => 
+    setEndpoints(prev =>
       prev.map(e => ({ ...e, status: 'pending' as const, records: undefined, error: undefined }))
     )
   }
@@ -253,14 +240,14 @@ export default function LoadDataPage() {
 
     let pollCount = 0
     const maxPolls = 40 // Máximo 10 minutos (40 * 15s)
-    
+
     const timer = setInterval(async () => {
       pollCount++
-      
+
       try {
         // Obtener el estado del job desde MongoDB
         const jobResponse = await fetch(`/api/admin/load-data-status?jobId=${jobId}`)
-        
+
         if (!jobResponse.ok) {
           console.error('Error fetching job status')
           return
@@ -290,7 +277,7 @@ export default function LoadDataPage() {
               '8Columns': '8columns'
             }
             const apiEndpoint = endpointMap[endpoint.name] || endpoint.name
-            
+
             try {
               const response = await fetch(`/api/data/${apiEndpoint}?date=${date}`)
               if (response.ok) {
@@ -307,11 +294,11 @@ export default function LoadDataPage() {
             return { name: endpoint.name, found: false, count: 0 }
           })
         )
-        
+
         // Verificar si todos los endpoints tienen datos
         const allFound = endpointChecks.every(check => check.found)
         const someFound = endpointChecks.some(check => check.found)
-        
+
         // Actualizar estado de endpoints en MongoDB
         if (someFound) {
           const updatedResults = endpointChecks.map(check => ({
@@ -344,7 +331,7 @@ export default function LoadDataPage() {
             }
             return e
           }))
-          
+
           // Mostrar progreso
           const newlyFound = endpointChecks.filter(c => c.found)
           newlyFound.forEach(check => {
@@ -354,12 +341,12 @@ export default function LoadDataPage() {
             }
           })
         }
-        
+
         if (allFound) {
           // ¡Todos completados!
           addLog('')
           addLog('✅ ¡Todos los datos detectados en la base de datos!')
-          
+
           const totalRecords = endpointChecks.reduce((sum, check) => sum + check.count, 0)
           addLog(`📊 Total: ${totalRecords} registros guardados`)
           addLog('🎉 ¡Proceso completado exitosamente!')
@@ -374,7 +361,7 @@ export default function LoadDataPage() {
               completedAt: new Date().toISOString()
             })
           })
-          
+
           // Detener polling pero mantener activeJobId para mostrar logs
           if (pollingTimer) {
             clearInterval(pollingTimer)
@@ -385,7 +372,7 @@ export default function LoadDataPage() {
           // NO limpiar activeJobId aquí - mantener para persistir logs
           return
         }
-        
+
         // Mostrar progreso cada 30 segundos
         if (pollCount % 2 === 0) {
           const elapsed = (pollCount * 15) / 60
@@ -393,13 +380,13 @@ export default function LoadDataPage() {
           const totalCount = endpointChecks.length
           addLog(`⏳ Esperando... (${elapsed.toFixed(1)} min - ${foundCount}/${totalCount} endpoints completados)`)
         }
-        
+
         // Timeout después de 10 minutos
         if (pollCount >= maxPolls) {
           addLog('')
           addLog('⚠️ Tiempo de espera agotado (10 minutos)')
           addLog('💡 El proceso puede seguir ejecutándose en segundo plano')
-          
+
           const foundCount = endpointChecks.filter(c => c.found).length
           if (foundCount > 0) {
             addLog(`✅ Se completaron ${foundCount} de ${endpointChecks.length} endpoints`)
@@ -415,7 +402,7 @@ export default function LoadDataPage() {
               completedAt: new Date().toISOString()
             })
           })
-          
+
           // Detener polling pero mantener activeJobId para mostrar logs
           if (pollingTimer) {
             clearInterval(pollingTimer)
@@ -425,12 +412,12 @@ export default function LoadDataPage() {
           setIsLoading(false)
           // NO limpiar activeJobId aquí - mantener para persistir logs
         }
-        
+
       } catch (error) {
         console.error('Error during polling:', error)
       }
     }, 15000) // Cada 15 segundos
-    
+
     setPollingTimer(timer)
   }
 
@@ -443,15 +430,15 @@ export default function LoadDataPage() {
     setIsPolling(false)
     setActiveJobId(null)
     setIsLoading(false)
-    
+
     // Limpiar localStorage
     localStorage.removeItem(STORAGE_KEY)
-    
+
     // Resetear a valores por defecto
     setSelectedDate(getDefaultDate())
     setEndpoints(getDefaultEndpoints())
     setLogs(['🔄 Estado reiniciado a valores por defecto'])
-    
+
     // Cerrar modal
     setShowClearModal(false)
   }
@@ -468,7 +455,7 @@ export default function LoadDataPage() {
     const targetDate = new Date(selectedDate)
     const today = new Date()
     today.setHours(0, 0, 0, 0)
-    
+
     if (targetDate > today) {
       addLog('❌ Error: No se pueden cargar datos de fechas futuras')
       return
@@ -478,10 +465,10 @@ export default function LoadDataPage() {
     setIsLoading(true)
     setLogs([]) // Limpiar logs del proceso anterior
     resetStatuses()
-    
+
     // Limpiar job anterior si existe
     setActiveJobId(null)
-    
+
     addLog(`📅 Iniciando carga de datos para ${selectedDate}`)
     addLog(`📊 Endpoints seleccionados: ${enabledEndpoints.map(e => e.label).join(', ')}`)
     addLog('🔐 Autenticando con Laudus API...')
@@ -507,7 +494,7 @@ export default function LoadDataPage() {
       // Guardar el jobId
       const jobId = result.jobId
       setActiveJobId(jobId)
-      
+
       // Guardar INMEDIATAMENTE en localStorage para persistir el jobId
       const initialState: PersistedState = {
         selectedDate,
@@ -520,8 +507,6 @@ export default function LoadDataPage() {
         lastUpdated: new Date().toISOString()
       }
       savePersistedState(initialState)
-      console.log('[DEBUG] Estado inicial guardado en localStorage con jobId:', jobId)
-
       // Verificar el modo de ejecución
       if (result.mode === 'github-actions') {
         // Modo GitHub Actions - Mostrar enlace y empezar polling
@@ -533,10 +518,10 @@ export default function LoadDataPage() {
         addLog('')
         addLog(result.details.note)
         addLog('')
-        
+
         // Iniciar polling para detectar cuando termina
         startPollingForJob(jobId, selectedDate, enabledEndpoints)
-        
+
       } else if (result.mode === 'local-execution-async') {
         // Modo local async - Ejecutando en segundo plano
         addLog('✅ Script Python iniciado en segundo plano')
@@ -546,14 +531,14 @@ export default function LoadDataPage() {
         addLog('')
         addLog(result.details.note)
         addLog('')
-        
+
         // Iniciar polling para detectar cuando termina
         startPollingForJob(jobId, selectedDate, enabledEndpoints)
-        
+
       } else if (result.mode === 'local-execution') {
         // Modo local - Mostrar resultados inmediatamente
         addLog('ℹ️ Ejecución local completada')
-        
+
         // Actualizar estados basado en resultados
         setEndpoints(prev => prev.map(endpoint => {
           const result_item = result.results.find((r: any) => r.endpoint === endpoint.name)
@@ -578,19 +563,19 @@ export default function LoadDataPage() {
 
         addLog('')
         addLog(result.message)
-        
+
         if (result.success) {
           addLog('🎉 ¡Proceso completado exitosamente!')
         } else {
           addLog('⚠️ Proceso completado con errores')
         }
-        
+
         setIsLoading(false)
       }
 
     } catch (error) {
       addLog(`❌ Error fatal: ${error instanceof Error ? error.message : 'Error desconocido'}`)
-      setEndpoints(prev => 
+      setEndpoints(prev =>
         prev.map(e => e.enabled ? { ...e, status: 'error' as const, error: 'Failed to load' } : e)
       )
       setIsLoading(false)
@@ -724,7 +709,7 @@ export default function LoadDataPage() {
                     </>
                   )}
                 </button>
-                
+
                 {isPolling && (
                   <button
                     onClick={stopPolling}
@@ -734,7 +719,7 @@ export default function LoadDataPage() {
                   </button>
                 )}
               </div>
-              
+
               {isPolling && (
                 <div className='mt-3 p-3 bg-blue-50 border border-blue-200 rounded-lg'>
                   <div className='flex items-center gap-2 text-sm text-blue-700'>
@@ -786,7 +771,7 @@ export default function LoadDataPage() {
                 </ul>
               </div>
             </div>
-            
+
             {/* Indicador de estado guardado */}
             {isMounted && (() => {
               const persisted = loadPersistedState()
@@ -802,7 +787,7 @@ export default function LoadDataPage() {
                   const days = Math.floor(hours / 24)
                   return `hace ${days} día${days > 1 ? 's' : ''}`
                 })()
-                
+
                 return (
                   <div className='pt-4 border-t border-gray-200'>
                     <div className='flex items-center gap-2 text-xs text-gray-500'>
@@ -833,7 +818,7 @@ export default function LoadDataPage() {
                 </p>
               </div>
             </div>
-            
+
             <div className='flex justify-end gap-3 pt-4'>
               <button
                 onClick={() => setShowClearModal(false)}

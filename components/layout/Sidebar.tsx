@@ -15,7 +15,8 @@ import {
   Database,
   Receipt,
   Building2,
-  Users
+  Users,
+  LayoutGrid
 } from 'lucide-react';
 
 const navigation = [
@@ -23,6 +24,7 @@ const navigation = [
   { name: 'Balance Totals', href: '/dashboard/totals', icon: TrendingUp },
   { name: 'Balance Standard', href: '/dashboard/standard', icon: FileText },
   { name: 'Balance 8 Columns', href: '/dashboard/8columns', icon: Table2 },
+  { name: 'Balance General', href: '/dashboard/balance-general', icon: LayoutGrid },
   { name: 'Facturas Mensuales', href: '/dashboard/invoices', icon: Receipt },
   { name: 'Facturas por Sucursal', href: '/dashboard/invoices/branch', icon: Building2 },
   { name: 'Facturas por Vendedor', href: '/dashboard/invoices/salesman', icon: Users },

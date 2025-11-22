@@ -29,24 +29,19 @@ async function executeLocalPythonAsync(date: string, endpoints: string[], jobId:
     // Path to Python script in laudus-api repo (sibling directory)
     const apiPath = path.join(process.cwd(), '..', 'laudus-api')
     const scriptPath = path.join(apiPath, 'scripts', 'fetch_balancesheet_manual.py')
-    
+
     // Map endpoint names
     const endpointMap: { [key: string]: string } = {
       'totals': 'totals',
       'standard': 'standard',
       '8Columns': '8columns'
     }
-    
+
     const mappedEndpoints = endpoints
       .map(ep => endpointMap[ep])
       .filter(Boolean)
       .join(' ')
-    
-    console.log('[INFO] Starting Python script in background...')
-    console.log('[INFO] Script:', scriptPath)
-    console.log('[INFO] Date:', date, 'Endpoints:', mappedEndpoints)
-    console.log('[INFO] Job ID:', jobId)
-    
+
     // Execute Python in background using spawn (no esperar)
     const pythonProcess = spawn('python', [
       scriptPath,
@@ -57,13 +52,11 @@ async function executeLocalPythonAsync(date: string, endpoints: string[], jobId:
       detached: false,
       stdio: 'ignore' // Ignora stdout/stderr para no bloquear
     })
-    
+
     // No esperamos a que termine
     pythonProcess.unref() // Permite que el proceso continúe en segundo plano
-    
-    console.log('[INFO] Python script started with PID:', pythonProcess.pid)
-    console.log('[INFO] Process will run in background, client should poll for results')
-    
+
+
     return NextResponse.json({
       success: true,
       mode: 'local-execution-async',
@@ -75,7 +68,7 @@ async function executeLocalPythonAsync(date: string, endpoints: string[], jobId:
         note: 'El proceso está ejecutándose en segundo plano. El sistema monitoreará automáticamente el progreso.'
       }
     })
-    
+
   } catch (error: any) {
     console.error('[ERROR] Failed to start Python script:', error)
     return NextResponse.json(
@@ -94,50 +87,47 @@ async function executeLocalPython(date: string, endpoints: string[]): Promise<Ne
     // Path to Python script in laudus-api repo (sibling directory)
     const apiPath = path.join(process.cwd(), '..', 'laudus-api')
     const scriptPath = path.join(apiPath, 'scripts', 'fetch_balancesheet_manual.py')
-    
+
     // Map endpoint names
     const endpointMap: { [key: string]: string } = {
       'totals': 'totals',
       'standard': 'standard',
       '8Columns': '8columns'
     }
-    
+
     const mappedEndpoints = endpoints
       .map(ep => endpointMap[ep])
       .filter(Boolean)
       .join(' ')
-    
+
     const command = `python "${scriptPath}" --date ${date} --endpoints ${mappedEndpoints}`
-    
-    console.log('[DEBUG] Executing:', command)
-    
+
+
     const { stdout, stderr } = await execPromise(command, {
       cwd: apiPath,
       timeout: 3600000, // 1 hour timeout
       maxBuffer: 10 * 1024 * 1024 // 10MB buffer
     })
-    
-    console.log('[DEBUG] Python stdout:', stdout)
     if (stderr) console.error('[DEBUG] Python stderr:', stderr)
-    
+
     // Parse JSON output from Python script
     const jsonStartIndex = stdout.indexOf('__RESULT_JSON__')
     if (jsonStartIndex === -1) {
       throw new Error('Could not find JSON output marker in Python output')
     }
-    
+
     const jsonString = stdout.substring(jsonStartIndex + '__RESULT_JSON__'.length).trim()
     const result = JSON.parse(jsonString)
-    
+
     return NextResponse.json({
       success: result.success,
       results: result.results,
       mode: 'local-execution',
-      message: result.success 
-        ? 'Data loaded successfully' 
+      message: result.success
+        ? 'Data loaded successfully'
         : 'Some endpoints failed to load'
     })
-    
+
   } catch (error: any) {
     console.error('[DEBUG] Local Python execution error:', error)
     return NextResponse.json(
@@ -186,7 +176,7 @@ export async function POST(request: NextRequest) {
 
     // Generar un jobId único
     const jobId = `job_${date}_${Date.now()}_${Math.random().toString(36).substring(7)}`
-    
+
     // Conectar a MongoDB y crear el registro inicial del job
     const client = await clientPromise
     const db = client.db('laudus_data')
@@ -211,23 +201,19 @@ export async function POST(request: NextRequest) {
 
     // Validar que tenemos el token de GitHub
     const githubToken = process.env.GITHUB_TOKEN
-    
+
     // Si no hay GitHub token, ejecutar localmente en segundo plano
     if (!githubToken) {
-      console.log('[INFO] No GitHub token found, executing Python script locally in background')
-      
       jobStatus.mode = 'local-execution-async'
       jobStatus.status = 'running'
       jobStatus.logs.push(`[${new Date().toLocaleTimeString('es-CL')}] 🔐 Ejecutando localmente en segundo plano`)
-      
+
       // Guardar job status en MongoDB
       await collection.insertOne(jobStatus)
-      
+
       const response = await executeLocalPythonAsync(date, endpoints, jobId)
       return response
     }
-    
-    console.log('[INFO] GitHub token found, triggering GitHub Actions workflow')
 
     // Map endpoint names to GitHub Actions format
     const endpointMap: { [key: string]: string } = {
@@ -247,8 +233,6 @@ export async function POST(request: NextRequest) {
         { status: 400 }
       )
     }
-
-    console.log(`[DEBUG] Triggering GitHub Actions workflow with date=${date} and endpoints=${githubEndpoints}`)
 
     // Disparar GitHub Actions workflow
     const workflowResponse = await fetch(
@@ -274,7 +258,7 @@ export async function POST(request: NextRequest) {
     if (!workflowResponse.ok) {
       const errorText = await workflowResponse.text()
       console.error('[DEBUG] GitHub API error:', errorText)
-      
+
       // Actualizar job con error
       await collection.updateOne(
         { jobId },
@@ -289,11 +273,9 @@ export async function POST(request: NextRequest) {
           } as any
         }
       )
-      
+
       throw new Error(`Failed to trigger GitHub Actions: ${workflowResponse.status} ${errorText}`)
     }
-
-    console.log('[DEBUG] GitHub Actions workflow triggered successfully')
 
     // Actualizar job status con información de GitHub Actions
     jobStatus.mode = 'github-actions'
@@ -304,7 +286,7 @@ export async function POST(request: NextRequest) {
       `[${new Date().toLocaleTimeString('es-CL')}] ✅ Workflow de GitHub Actions disparado exitosamente`,
       `[${new Date().toLocaleTimeString('es-CL')}] 🔗 Ver progreso: ${jobStatus.actionUrl}`
     )
-    
+
     // Guardar en MongoDB
     await collection.insertOne(jobStatus)
 
