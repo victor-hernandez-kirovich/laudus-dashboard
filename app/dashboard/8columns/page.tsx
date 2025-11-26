@@ -6,106 +6,14 @@ import { Card } from '@/components/ui/Card'
 import { MonthPicker } from '@/components/ui/MonthPicker'
 // Charts removed per request
 import { formatCurrency, formatDate, normalizeBalanceData } from '@/lib/utils'
-import { Calendar, ChevronDown, ChevronRight, LayoutGrid, Table as TableIcon } from 'lucide-react'
-
-// Componente para visualizar el Balance General
-const BalanceGeneralView = ({ data }: { data: any }) => {
-  if (!data) return <div className="p-4 text-center text-gray-500">No hay datos de Balance General para esta fecha. Ejecute el script de generación.</div>
-
-  const { assets, liabilities, equity, totals } = data
-
-  const AccountList = ({ items, colorClass = "text-gray-900" }: { items: any[], colorClass?: string }) => (
-    <div className="overflow-x-auto">
-      <table className="min-w-full divide-y divide-gray-200">
-        <thead className="bg-gray-50">
-          <tr>
-            <th className="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase">Código</th>
-            <th className="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase">Cuenta</th>
-            <th className="px-3 py-2 text-right text-xs font-medium text-gray-500 uppercase">Monto</th>
-          </tr>
-        </thead>
-        <tbody className="bg-white divide-y divide-gray-200">
-          {items.map((item: any, idx: number) => (
-            <tr key={idx} className="hover:bg-gray-50">
-              <td className="px-3 py-2 text-xs font-medium text-gray-500">{item.accountCode}</td>
-              <td className="px-3 py-2 text-xs text-gray-900">{item.accountName}</td>
-              <td className={`px-3 py-2 text-xs text-right font-medium ${colorClass}`}>
-                {formatCurrency(item.amount)}
-              </td>
-            </tr>
-          ))}
-        </tbody>
-      </table>
-    </div>
-  )
-
-  return (
-    <div className="space-y-6 animate-in fade-in duration-500">
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        {/* Columna Izquierda: Activos */}
-        <div className="space-y-6">
-          <Card title="Activos" subtitle={`Total: ${formatCurrency(totals?.total_assets || 0)}`}>
-            <div className="max-h-[600px] overflow-y-auto">
-              <AccountList items={assets} colorClass="text-blue-700" />
-            </div>
-            <div className="mt-4 pt-4 border-t border-gray-200 flex justify-between items-center bg-blue-50 p-3 rounded-md">
-              <span className="font-bold text-blue-900">Total Activos</span>
-              <span className="font-bold text-blue-700 text-lg">{formatCurrency(totals?.total_assets || 0)}</span>
-            </div>
-          </Card>
-        </div>
-
-        {/* Columna Derecha: Pasivos y Patrimonio */}
-        <div className="space-y-6">
-          <Card title="Pasivos" subtitle={`Total: ${formatCurrency(totals?.total_liabilities || 0)}`}>
-            <div className="max-h-[250px] overflow-y-auto">
-              <AccountList items={liabilities} colorClass="text-red-700" />
-            </div>
-            <div className="mt-4 pt-4 border-t border-gray-200 flex justify-between items-center bg-red-50 p-3 rounded-md">
-              <span className="font-bold text-red-900">Total Pasivos</span>
-              <span className="font-bold text-red-700 text-lg">{formatCurrency(totals?.total_liabilities || 0)}</span>
-            </div>
-          </Card>
-
-          <Card title="Patrimonio" subtitle={`Total: ${formatCurrency(totals?.total_equity || 0)}`}>
-            <div className="max-h-[250px] overflow-y-auto">
-              <AccountList items={equity} colorClass="text-green-700" />
-            </div>
-            <div className="mt-4 pt-4 border-t border-gray-200 flex justify-between items-center bg-green-50 p-3 rounded-md">
-              <span className="font-bold text-green-900">Total Patrimonio</span>
-              <span className="font-bold text-green-700 text-lg">{formatCurrency(totals?.total_equity || 0)}</span>
-            </div>
-          </Card>
-
-          {/* Resumen de Cuadratura */}
-          <Card className="bg-gray-50 border-blue-200">
-            <div className="flex justify-between items-center">
-              <span className="text-sm font-medium text-gray-600">Total Pasivos + Patrimonio</span>
-              <span className="text-lg font-bold text-gray-900">
-                {formatCurrency((totals?.total_liabilities || 0) + (totals?.total_equity || 0))}
-              </span>
-            </div>
-            {Math.abs(totals?.balance_check || 0) > 0.01 && (
-              <div className="mt-2 text-xs text-red-600 font-bold text-right">
-                Diferencia: {formatCurrency(totals?.balance_check || 0)}
-              </div>
-            )}
-          </Card>
-        </div>
-      </div>
-    </div>
-  )
-}
+import { Calendar, ChevronDown, ChevronRight } from 'lucide-react'
 
 export default function Balance8ColumnsPage() {
   const [allData, setAllData] = useState<any[]>([])
-  const [generalData, setGeneralData] = useState<any>(null)
   const [selectedDate, setSelectedDate] = useState<string>('')
   const [loading, setLoading] = useState(true)
-  const [loadingGeneral, setLoadingGeneral] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [expandedRows, setExpandedRows] = useState<Set<number>>(new Set())
-  const [activeTab, setActiveTab] = useState<'8columns' | 'general'>('8columns')
 
   const toggleRow = (index: number) => {
     const newExpanded = new Set(expandedRows)
@@ -137,29 +45,6 @@ export default function Balance8ColumnsPage() {
     }
     fetchData()
   }, [])
-
-  // Fetch General Balance Data when tab or date changes
-  useEffect(() => {
-    async function fetchGeneralData() {
-      if (activeTab === 'general' && selectedDate) {
-        setLoadingGeneral(true)
-        try {
-          const res = await fetch(`/api/data/balance-general?date=${selectedDate}`)
-          if (res.ok) {
-            const result = await res.json()
-            // Find the record for the specific date or take the first one if filtered by API
-            const record = result.data && result.data.length > 0 ? result.data[0] : null
-            setGeneralData(record)
-          }
-        } catch (err) {
-          console.error("Error fetching balance general", err)
-        } finally {
-          setLoadingGeneral(false)
-        }
-      }
-    }
-    fetchGeneralData()
-  }, [activeTab, selectedDate])
 
   if (loading) {
     return (
@@ -210,35 +95,7 @@ export default function Balance8ColumnsPage() {
 
       <div className='p-8 space-y-6'>
         {/* Controles Superiores */}
-        <div className='flex flex-col md:flex-row justify-between items-start md:items-center gap-4'>
-
-          {/* Selector de Pestañas */}
-          <div className="bg-gray-100 p-1 rounded-lg inline-flex">
-            <button
-              onClick={() => setActiveTab('8columns')}
-              className={`px-4 py-2 rounded-md text-sm font-medium transition-all ${activeTab === '8columns'
-                  ? 'bg-white text-blue-600 shadow-sm'
-                  : 'text-gray-600 hover:text-gray-900 hover:bg-gray-200'
-                }`}
-            >
-              <div className="flex items-center gap-2">
-                <TableIcon className="w-4 h-4" />
-                Balance 8 Columnas
-              </div>
-            </button>
-            <button
-              onClick={() => setActiveTab('general')}
-              className={`px-4 py-2 rounded-md text-sm font-medium transition-all ${activeTab === 'general'
-                  ? 'bg-white text-blue-600 shadow-sm'
-                  : 'text-gray-600 hover:text-gray-900 hover:bg-gray-200'
-                }`}
-            >
-              <div className="flex items-center gap-2">
-                <LayoutGrid className="w-4 h-4" />
-                Balance General
-              </div>
-            </button>
-          </div>
+        <div className='flex flex-col md:flex-row justify-end items-start md:items-center gap-4'>
 
           {/* Selector de Mes */}
           <div className='bg-white rounded-lg shadow-sm border border-gray-200 inline-flex'>
@@ -259,8 +116,7 @@ export default function Balance8ColumnsPage() {
         </div>
 
         {/* Contenido Principal */}
-        {activeTab === '8columns' ? (
-          <Card title='Detalle 8 Columnas' subtitle={`Total: ${records.length} cuentas contables`}>
+        <Card title='Detalle 8 Columnas' subtitle={`Total: ${records.length} cuentas contables`}>
             <div className='overflow-x-auto max-h-[600px] overflow-y-auto'>
               <table className='min-w-full divide-y divide-gray-200'>
                 <thead className='bg-gray-50 sticky top-0 z-10 shadow-sm'>
@@ -418,16 +274,6 @@ export default function Balance8ColumnsPage() {
               </table>
             </div>
           </Card>
-        ) : (
-          // Vista Balance General
-          loadingGeneral ? (
-            <div className="p-12 flex justify-center">
-              <div className="text-gray-500 animate-pulse">Cargando Balance General...</div>
-            </div>
-          ) : (
-            <BalanceGeneralView data={generalData} />
-          )
-        )}
       </div>
     </div>
   )
