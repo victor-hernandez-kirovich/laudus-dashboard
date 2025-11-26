@@ -1,0 +1,118 @@
+'use client'
+
+import { Line, LineChart, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, ReferenceLine } from 'recharts'
+import { Card } from '@/components/ui/Card'
+
+interface RoaData {
+  date: string
+  roa: number
+  utilidadNeta: number
+  activoTotal: number
+  ingresos: number
+  gastos: number
+}
+
+interface RoaChartProps {
+  data: RoaData[]
+  onHover?: (data: RoaData | null) => void
+}
+
+export function RoaChart({ data, onHover }: RoaChartProps) {
+  const formatSpanishDate = (dateString: string): string => {
+    const [year, month] = dateString.split('-').map(Number)
+    const months = ['Ene', 'Feb', 'Mar', 'Abr', 'May', 'Jun', 'Jul', 'Ago', 'Sep', 'Oct', 'Nov', 'Dic']
+    return `${months[month - 1]} ${year}`
+  }
+
+  const formatCurrency = (value: number): string => {
+    return new Intl.NumberFormat('es-CL', {
+      style: 'currency',
+      currency: 'CLP',
+      minimumFractionDigits: 0,
+      maximumFractionDigits: 0
+    }).format(value)
+  }
+
+  // Preparar datos para el gráfico
+  const chartData = [...data].reverse().map(item => ({
+    ...item,
+    displayDate: formatSpanishDate(item.date)
+  }))
+
+  const CustomTooltip = ({ active, payload }: any) => {
+    if (active && payload && payload.length) {
+      const data = payload[0].payload
+      return (
+        <div className='bg-white p-4 border border-gray-200 rounded-lg shadow-lg'>
+          <p className='font-semibold text-gray-900 mb-2'>{data.displayDate}</p>
+          <div className='space-y-1'>
+            <p className='text-sm'>
+              <span className='text-gray-600'>ROA: </span>
+              <span className='font-bold text-blue-600'>{data.roa.toFixed(2)}%</span>
+            </p>
+            <p className='text-sm'>
+              <span className='text-gray-600'>Utilidad Neta: </span>
+              <span className='font-semibold text-gray-900'>{formatCurrency(data.utilidadNeta)}</span>
+            </p>
+            <p className='text-sm'>
+              <span className='text-gray-600'>Activo Total: </span>
+              <span className='font-semibold text-gray-900'>{formatCurrency(data.activoTotal)}</span>
+            </p>
+          </div>
+        </div>
+      )
+    }
+    return null
+  }
+
+  return (
+    <Card title='Evolución del ROA'>
+      <div className='h-80'>
+        <ResponsiveContainer width='100%' height='100%'>
+          <LineChart
+            data={chartData}
+            margin={{ top: 5, right: 30, left: 20, bottom: 5 }}
+            onMouseMove={(e: any) => {
+              if (e && e.activePayload && e.activePayload.length > 0) {
+                const hoveredData = data.find(d => d.date === e.activePayload[0].payload.date)
+                if (hoveredData && onHover) {
+                  onHover(hoveredData)
+                }
+              }
+            }}
+            onMouseLeave={() => {
+              if (onHover) {
+                onHover(null)
+              }
+            }}
+          >
+            <CartesianGrid strokeDasharray='3 3' stroke='#e5e7eb' />
+            <XAxis
+              dataKey='displayDate'
+              tick={{ fontSize: 12 }}
+              angle={-45}
+              textAnchor='end'
+              height={80}
+            />
+            <YAxis
+              tick={{ fontSize: 12 }}
+              label={{ value: 'ROA (%)', angle: -90, position: 'insideLeft' }}
+            />
+            <Tooltip content={<CustomTooltip />} />
+            <ReferenceLine y={5} stroke='#10b981' strokeDasharray='3 3' label='Excelente (5%)' />
+            <ReferenceLine y={3} stroke='#3b82f6' strokeDasharray='3 3' label='Bueno (3%)' />
+            <ReferenceLine y={1} stroke='#f59e0b' strokeDasharray='3 3' label='Regular (1%)' />
+            <Line
+              type='monotone'
+              dataKey='roa'
+              stroke='#2563eb'
+              strokeWidth={3}
+              dot={{ fill: '#2563eb', r: 4 }}
+              activeDot={{ r: 6 }}
+            />
+          </LineChart>
+        </ResponsiveContainer>
+      </div>
+    </Card>
+  )
+}

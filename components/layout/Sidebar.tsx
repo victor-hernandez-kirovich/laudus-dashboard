@@ -39,6 +39,8 @@ const navigation = [
       { name: 'Días de Cobro y Pago', href: '/dashboard/indicadores-financieros/dias-cobro-pago' },
       { name: 'Margen de Rentabilidad', href: '/dashboard/indicadores-financieros/margen-rentabilidad' },
       { name: 'EBITDA', href: '/dashboard/indicadores-financieros/ebitda' },
+      { name: 'ROA - Return on Assets', href: '/dashboard/indicadores-financieros/roa' },
+      { name: 'ROI - Return on Investment', href: '/dashboard/indicadores-financieros/roi' },
     ]
   },
   { name: 'Cargar Datos', href: '/dashboard/admin/load-data', icon: Database },

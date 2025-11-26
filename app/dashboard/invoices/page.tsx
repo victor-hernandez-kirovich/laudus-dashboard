@@ -5,6 +5,9 @@ import { Header } from "@/components/layout/Header";
 import { Card } from "@/components/ui/Card";
 import { formatCurrency } from "@/lib/utils";
 import { X, ChevronDown, ChevronUp } from "lucide-react";
+import { VentasNetasChart } from "@/components/charts/VentasNetasChart";
+import { MargenMensualChart } from "@/components/charts/MargenMensualChart";
+import { DevolucionesChart } from "@/components/charts/DevolucionesChart";
 
 interface InvoiceData {
   month: string;
@@ -54,6 +57,78 @@ export default function InvoicesPage() {
     }),
     { total: 0, returns: 0, net: 0, margin: 0, discounts: 0, quantity: 0 }
   );
+
+  // Preparar datos para gráfica de Ventas Netas (multi-año)
+  const prepareVentasNetasData = () => {
+    const monthNames = [
+      "Enero", "Febrero", "Marzo", "Abril", "Mayo", "Junio",
+      "Julio", "Agosto", "Septiembre", "Octubre", "Noviembre", "Diciembre"
+    ];
+
+    return monthNames.map((monthName, index) => {
+      const monthNumber = index + 1;
+      const dataPoint: any = {
+        month: `${monthNumber}`,
+        monthName: monthName,
+      };
+
+      // Agregar datos de cada año disponible
+      availableYears.forEach(year => {
+        const monthData = invoices.find(
+          inv => inv.year === year && inv.monthNumber === monthNumber
+        );
+        dataPoint[`net${year}`] = monthData ? monthData.net : 0;
+      });
+
+      return dataPoint;
+    });
+  };
+
+  // Preparar datos para gráfica de Margen Mensual
+  const prepareMargenData = () => {
+    const monthNames = [
+      "Enero", "Febrero", "Marzo", "Abril", "Mayo", "Junio",
+      "Julio", "Agosto", "Septiembre", "Octubre", "Noviembre", "Diciembre"
+    ];
+
+    return monthNames.map((monthName, index) => {
+      const monthNumber = index + 1;
+      const monthData = invoices.find(
+        inv => inv.year === selectedYear && inv.monthNumber === monthNumber
+      );
+
+      return {
+        month: `${monthNumber}`,
+        monthName: monthName,
+        margen: monthData ? monthData.margin : 0,
+        margenPercentage: monthData && monthData.net > 0 
+          ? (monthData.margin / monthData.net) * 100 
+          : 0,
+      };
+    });
+  };
+
+  // Preparar datos para gráfica de Devoluciones
+  const prepareDevolucionesData = () => {
+    const monthNames = [
+      "Enero", "Febrero", "Marzo", "Abril", "Mayo", "Junio",
+      "Julio", "Agosto", "Septiembre", "Octubre", "Noviembre", "Diciembre"
+    ];
+
+    return monthNames.map((monthName, index) => {
+      const monthNumber = index + 1;
+      const monthData = invoices.find(
+        inv => inv.year === selectedYear && inv.monthNumber === monthNumber
+      );
+
+      return {
+        month: `${monthNumber}`,
+        monthName: monthName,
+        returns: monthData ? monthData.returns : 0,
+        returnsPercentage: monthData ? monthData.returnsPercentage : 0,
+      };
+    });
+  };
 
   useEffect(() => {
     async function fetchData() {
@@ -372,6 +447,105 @@ export default function InvoicesPage() {
             )}
           </div>
         </Card>
+
+        {/* Gráficas de Análisis */}
+        <div className="space-y-6">
+          {/* Gráfica 1: Ventas Netas Mensuales - Comparación Multi-año */}
+          <Card>
+            <div className="p-6">
+              <div className="mb-4">
+                <h3 className="text-lg font-bold text-gray-900">
+                  📈 Evolución de Ventas Netas
+                </h3>
+                <p className="text-sm text-gray-600">
+                  Comparación de ventas netas por mes entre diferentes años
+                </p>
+                <div className="mt-3 p-3 bg-blue-50 rounded-lg border border-blue-200">
+                  <p className="text-xs font-semibold text-blue-900 mb-1">
+                    💡 Cálculo:
+                  </p>
+                  <p className="text-xs text-blue-800">
+                    <strong>Ventas Netas</strong> = Total Bruto - Devoluciones
+                  </p>
+                  <p className="text-xs text-blue-700 mt-1">
+                    Representa las ventas reales después de descontar productos devueltos por los clientes.
+                  </p>
+                </div>
+              </div>
+              <VentasNetasChart
+                data={prepareVentasNetasData()}
+                years={availableYears}
+              />
+            </div>
+          </Card>
+
+          {/* Gráficas 2 y 3: Margen y Devoluciones lado a lado */}
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+            {/* Gráfica 2: Margen Mensual */}
+            <Card>
+              <div className="p-6">
+                <div className="mb-4">
+                  <h3 className="text-lg font-bold text-gray-900">
+                    💰 Margen Mensual {selectedYear}
+                  </h3>
+                  <p className="text-sm text-gray-600">
+                    Evolución del margen en monto y porcentaje
+                  </p>
+                  <div className="mt-3 p-3 bg-purple-50 rounded-lg border border-purple-200">
+                    <p className="text-xs font-semibold text-purple-900 mb-1">
+                      💡 Cálculo:
+                    </p>
+                    <p className="text-xs text-purple-800">
+                      <strong>Monto de Margen</strong> = Utilidad bruta del mes
+                    </p>
+                    <p className="text-xs text-purple-800">
+                      <strong>% de Margen</strong> = (Margen ÷ Ventas Netas) × 100
+                    </p>
+                    <p className="text-xs text-purple-700 mt-1">
+                      Indica la rentabilidad: cuánto ganamos por cada peso vendido.
+                    </p>
+                  </div>
+                </div>
+                <MargenMensualChart
+                  data={prepareMargenData()}
+                  year={selectedYear}
+                />
+              </div>
+            </Card>
+
+            {/* Gráfica 3: Devoluciones */}
+            <Card>
+              <div className="p-6">
+                <div className="mb-4">
+                  <h3 className="text-lg font-bold text-gray-900">
+                    📉 Devoluciones {selectedYear}
+                  </h3>
+                  <p className="text-sm text-gray-600">
+                    Monto y porcentaje de devoluciones por mes
+                  </p>
+                  <div className="mt-3 p-3 bg-red-50 rounded-lg border border-red-200">
+                    <p className="text-xs font-semibold text-red-900 mb-1">
+                      💡 Cálculo:
+                    </p>
+                    <p className="text-xs text-red-800">
+                      <strong>Monto de Devoluciones</strong> = Total de productos devueltos
+                    </p>
+                    <p className="text-xs text-red-800">
+                      <strong>% de Devoluciones</strong> = (Devoluciones ÷ Total Bruto) × 100
+                    </p>
+                    <p className="text-xs text-red-700 mt-1">
+                      Un porcentaje alto puede indicar problemas de calidad o satisfacción del cliente.
+                    </p>
+                  </div>
+                </div>
+                <DevolucionesChart
+                  data={prepareDevolucionesData()}
+                  year={selectedYear}
+                />
+              </div>
+            </Card>
+          </div>
+        </div>
       </div>
 
       {/* Modal de Detalle */}

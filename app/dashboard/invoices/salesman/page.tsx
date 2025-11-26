@@ -6,6 +6,7 @@ import { Card } from "@/components/ui/Card";
 import { formatCurrency } from "@/lib/utils";
 import { InvoicesBySalesmanData } from "@/lib/types";
 import { ChevronDown, ChevronUp } from "lucide-react";
+import { TopVendedoresChart } from "@/components/charts/TopVendedoresChart";
 
 export default function InvoicesBySalesmanPage() {
   const [salesmen, setSalesmen] = useState<InvoicesBySalesmanData[]>([]);
@@ -137,6 +138,20 @@ export default function InvoicesBySalesmanPage() {
 
   const monthName =
     selectedMonthData.length > 0 ? selectedMonthData[0].monthName : "";
+
+  // Prepare data for Top Vendedores Chart
+  const prepareTopVendedoresData = () => {
+    return selectedMonthData
+      .map((salesman) => ({
+        salesmanName: salesman.salesmanName,
+        net: salesman.net,
+        margin: salesman.margin,
+        marginPercentage: salesman.marginPercentage,
+        numberOfDocuments: salesman.numberOfDocuments,
+        averageTicket: salesman.averageTicket,
+      }))
+      .sort((a, b) => b.net - a.net);
+  };
 
   return (
     <div>
@@ -395,6 +410,34 @@ export default function InvoicesBySalesmanPage() {
           <Card>
             <div className="text-center py-12 text-gray-500">
               No se encontraron datos para el mes seleccionado
+            </div>
+          </Card>
+        )}
+
+        {/* Gráfica: Top Vendedores */}
+        {selectedMonthData.length > 0 && (
+          <Card>
+            <div className="p-6">
+              <div className="mb-4">
+                <h3 className="text-lg font-bold text-gray-900">
+                  🏆 Top 10 Vendedores del Mes
+                </h3>
+                <p className="text-sm text-gray-600">
+                  Ranking de vendedores por volumen de ventas netas - {monthName} {selectedYear}
+                </p>
+                <div className="mt-3 p-3 bg-purple-50 rounded-lg border border-purple-200">
+                  <p className="text-xs font-semibold text-purple-900 mb-1">
+                    💡 Cálculo:
+                  </p>
+                  <p className="text-xs text-purple-800">
+                    <strong>Ranking</strong> = Ordenados de mayor a menor por ventas netas
+                  </p>
+                  <p className="text-xs text-purple-700 mt-1">
+                    El color más oscuro representa al vendedor #1. Identifica rápidamente a los vendedores estrella del mes.
+                  </p>
+                </div>
+              </div>
+              <TopVendedoresChart data={prepareTopVendedoresData()} topN={10} />
             </div>
           </Card>
         )}

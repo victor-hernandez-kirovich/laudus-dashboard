@@ -1,54 +1,97 @@
 'use client'
 
-import { useState, useEffect, Fragment } from 'react'
+import { useState, useEffect } from 'react'
 import { Header } from '@/components/layout/Header'
 import { Card } from '@/components/ui/Card'
-import { MonthPicker } from '@/components/ui/MonthPicker'
 import { formatCurrency } from '@/lib/utils'
-import { Calendar, ChevronDown, ChevronRight } from 'lucide-react'
+import { Calendar } from 'lucide-react'
+
+const MONTH_NAMES = ['Ene', 'Feb', 'Mar', 'Abr', 'May', 'Jun', 'Jul', 'Ago', 'Sep', 'Oct', 'Nov', 'Dic'];
+
+interface Account {
+    accountCode: string
+    accountName: string
+    amount: number
+    verticalAnalysis: number
+}
+
+interface MonthData {
+    currentAssets: Account[]
+    nonCurrentAssets: Account[]
+    currentLiabilities: Account[]
+    nonCurrentLiabilities: Account[]
+    equity: Account[]
+    totals: {
+        totalCurrentAssets: number
+        totalNonCurrentAssets: number
+        totalAssets: number
+        totalCurrentLiabilities: number
+        totalNonCurrentLiabilities: number
+        totalLiabilities: number
+        totalEquity: number
+        totalLiabilitiesAndEquity: number
+        balanceCheck: number
+    }
+}
 
 export default function BalanceGeneralPage() {
-    const [allData, setAllData] = useState<any[]>([])
-    const [selectedDate, setSelectedDate] = useState<string>('')
+    const [yearData, setYearData] = useState<{ year: string, months: { [key: string]: MonthData } } | null>(null)
+    const [selectedYear, setSelectedYear] = useState<string>('')
+    const [availableYears, setAvailableYears] = useState<string[]>([])
     const [loading, setLoading] = useState(true)
     const [error, setError] = useState<string | null>(null)
-    const [expandedRows, setExpandedRows] = useState<Set<number>>(new Set())
-
-    const toggleRow = (index: number) => {
-        const newExpanded = new Set(expandedRows)
-        if (newExpanded.has(index)) {
-            newExpanded.delete(index)
-        } else {
-            newExpanded.add(index)
-        }
-        setExpandedRows(newExpanded)
-    }
 
     useEffect(() => {
-        async function fetchData() {
+        async function fetchAvailableYears() {
             try {
                 const res = await fetch('/api/data/balance-general')
-                if (!res.ok) throw new Error('Error al cargar datos')
+                if (!res.ok) throw new Error('Error al cargar años disponibles')
                 const result = await res.json()
-
-                setAllData(result.data || [])
-                if (result.data && result.data.length > 0) {
-                    setSelectedDate(result.data[0].date)
+                
+                if (result.availableYears && result.availableYears.length > 0) {
+                    setAvailableYears(result.availableYears)
+                    setSelectedYear(result.availableYears[0])
                 }
             } catch (err) {
-                console.error('Error fetching balance general:', err)
+                console.error('Error fetching available years:', err)
                 setError(err instanceof Error ? err.message : 'Error desconocido')
+            }
+        }
+        fetchAvailableYears()
+    }, [])
+
+    useEffect(() => {
+        if (!selectedYear) return
+
+        async function fetchYearData() {
+            try {
+                setLoading(true)
+                const res = await fetch(`/api/data/balance-general?year=${selectedYear}`)
+                if (!res.ok) throw new Error('Error al cargar datos del año')
+                const result = await res.json()
+
+                if (result.success && result.data) {
+                    setYearData(result.data)
+                    setError(null)
+                } else {
+                    setError(result.error || 'No hay datos para este año')
+                    setYearData(null)
+                }
+            } catch (err) {
+                console.error('Error fetching year data:', err)
+                setError(err instanceof Error ? err.message : 'Error desconocido')
+                setYearData(null)
             } finally {
                 setLoading(false)
             }
         }
-        fetchData()
-    }, [])
+        fetchYearData()
+    }, [selectedYear])
 
-    if (loading) {
+    if (loading && !yearData) {
         return (
             <div>
-                <Header title='Balance General' subtitle='Cargando datos...' />
+                <Header title='Balance General Comparativo' subtitle='Cargando datos...' />
                 <div className='p-8 flex items-center justify-center'>
                     <div className='text-gray-600 animate-pulse'>Cargando datos...</div>
                 </div>
@@ -59,7 +102,7 @@ export default function BalanceGeneralPage() {
     if (error) {
         return (
             <div>
-                <Header title='Balance General' subtitle='Error' />
+                <Header title='Balance General Comparativo' subtitle='Error' />
                 <div className='p-8'>
                     <Card>
                         <div className='text-red-600'>Error: {error}</div>
@@ -69,10 +112,10 @@ export default function BalanceGeneralPage() {
         )
     }
 
-    if (!allData || allData.length === 0) {
+    if (!yearData || !yearData.months) {
         return (
             <div>
-                <Header title='Balance General' subtitle='No hay datos disponibles' />
+                <Header title='Balance General Comparativo' subtitle='No hay datos disponibles' />
                 <div className='p-8'>
                     <Card>
                         <div className='text-center py-12'>
@@ -84,251 +127,239 @@ export default function BalanceGeneralPage() {
         )
     }
 
-    const currentRecord = allData.find(record => record.date === selectedDate) || allData[0]
-    const availableDates = allData.map(record => record.date)
+    // Obtener lista de meses disponibles en el año
+    const availableMonths = Object.keys(yearData.months).sort()
+    
+    // Crear estructura de cuentas unificadas
+    const accountsStructure = new Map<string, { code: string, name: string, monthlyAmounts: { [key: string]: number }, verticalAnalysis: number }>()
 
-    if (!currentRecord) {
+    // Recopilar todas las cuentas únicas
+    availableMonths.forEach(month => {
+        const monthData = yearData.months[month]
+        
+        const processAccounts = (accounts: Account[]) => {
+            accounts.forEach(account => {
+                if (!accountsStructure.has(account.accountCode)) {
+                    accountsStructure.set(account.accountCode, {
+                        code: account.accountCode,
+                        name: account.accountName,
+                        monthlyAmounts: {},
+                        verticalAnalysis: account.verticalAnalysis
+                    })
+                }
+                accountsStructure.get(account.accountCode)!.monthlyAmounts[month] = account.amount
+            })
+        }
+
+        processAccounts(monthData.currentAssets)
+        processAccounts(monthData.nonCurrentAssets)
+        processAccounts(monthData.currentLiabilities)
+        processAccounts(monthData.nonCurrentLiabilities)
+        processAccounts(monthData.equity)
+    })
+
+    // Obtener el último mes disponible para los datos de referencia
+    const lastMonth = availableMonths[availableMonths.length - 1]
+    const lastMonthData = yearData.months[lastMonth]
+
+    const renderAccountRows = (accounts: Account[], bgColor: string = 'bg-white') => {
+        return accounts.map((account, idx) => {
+            const accountData = accountsStructure.get(account.accountCode)
+            if (!accountData) return null
+
+            return (
+                <tr key={`${account.accountCode}-${idx}`} className={`${bgColor} hover:bg-gray-50`}>
+                    <td className='px-3 py-2 text-xs text-gray-900 whitespace-nowrap'>{account.accountName}</td>
+                    {availableMonths.map(month => (
+                        <td key={month} className='px-3 py-2 text-xs text-right text-gray-900'>
+                            {accountData.monthlyAmounts[month] ? formatCurrency(accountData.monthlyAmounts[month]) : '-'}
+                        </td>
+                    ))}
+                    <td className='px-3 py-2 text-xs text-right font-medium text-gray-700'>
+                        {accountData.verticalAnalysis.toFixed(1)}%
+                    </td>
+                </tr>
+            )
+        })
+    }
+
+    const renderSubtotalRow = (label: string, amounts: { [key: string]: number }, bgColor: string, textColor: string) => {
         return (
-            <div>
-                <Header title='Balance General' subtitle='Sin datos' />
-                <div className='p-8'>
-                    <Card>
-                        <div className='text-gray-500'>No hay datos para la fecha seleccionada</div>
-                    </Card>
-                </div>
-            </div>
+            <tr className={`${bgColor} font-bold`}>
+                <td className={`px-3 py-2 text-xs ${textColor}`}>{label}</td>
+                {availableMonths.map(month => {
+                    const amount = amounts[month] || 0
+                    return (
+                        <td key={month} className={`px-3 py-2 text-xs text-right ${textColor}`}>
+                            {formatCurrency(amount)}
+                        </td>
+                    )
+                })}
+                <td className={`px-3 py-2 text-xs text-right ${textColor}`}>-</td>
+            </tr>
         )
     }
 
-    const { assets = [], liabilities = [], equity = [], totals = {} } = currentRecord
-
-    // Crear lista de todas las cuentas individuales
-    const allAccounts: any[] = []
-
-    // Agregar todas las cuentas de activos (cada una en su propia fila)
-    assets.forEach((asset: any) => {
-        allAccounts.push({
-            accountCode: asset.accountCode,
-            accountName: asset.accountName,
-            assetAmount: asset.amount,
-            liabilityAmount: 0
-        })
-    })
-
-    // Agregar todas las cuentas de pasivos (cada una en su propia fila)
-    liabilities.forEach((liability: any) => {
-        allAccounts.push({
-            accountCode: liability.accountCode,
-            accountName: liability.accountName,
-            assetAmount: 0,
-            liabilityAmount: liability.amount
-        })
-    })
-
-    // Agregar patrimonio
-    equity.forEach((eq: any) => {
-        allAccounts.push({
-            accountCode: eq.accountCode,
-            accountName: eq.accountName,
-            assetAmount: 0,
-            liabilityAmount: eq.amount
-        })
-    })
-
-    // Ordenar por código de cuenta
-    allAccounts.sort((a, b) => (a.accountCode || '').localeCompare(b.accountCode || ''));
-    if (allAccounts.length > 0)
-
+    const renderTotalRow = (label: string, amounts: { [key: string]: number }, bgColor: string, textColor: string) => {
         return (
-            <div>
-                <Header
-                    title='Balance General'
-                    subtitle={`Estado de situación financiera - ${selectedDate}`}
-                />
-
-                <div className='p-8 space-y-6'>
-                    {/* Selector de Mes */}
-                    <div className='flex justify-end'>
-                        <div className='bg-white rounded-lg shadow-sm border border-gray-200 inline-flex'>
-                            <div className='p-4'>
-                                <div className='flex items-center gap-3'>
-                                    <Calendar className='h-5 w-5 text-blue-600' />
-                                    <span className='text-sm font-medium text-gray-700'>
-                                        Seleccionar Mes:
-                                    </span>
-                                    <MonthPicker
-                                        availableDates={availableDates}
-                                        selectedDate={selectedDate}
-                                        onDateSelect={setSelectedDate}
-                                    />
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-
-                    {/* Resumen de Totales */}
-                    <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                        <Card className="bg-gradient-to-br from-blue-50 to-blue-100 border-blue-200">
-                            <div className="text-center">
-                                <p className="text-sm font-medium text-blue-600">Total Activos</p>
-                                <p className="text-2xl font-bold text-blue-900 mt-1">
-                                    {formatCurrency(totals?.total_assets || 0)}
-                                </p>
-                            </div>
-                        </Card>
-
-                        <Card className="bg-gradient-to-br from-red-50 to-red-100 border-red-200">
-                            <div className="text-center">
-                                <p className="text-sm font-medium text-red-600">Total Pasivos</p>
-                                <p className="text-2xl font-bold text-red-900 mt-1">
-                                    {formatCurrency(totals?.total_liabilities || 0)}
-                                </p>
-                            </div>
-                        </Card>
-
-                        <Card className="bg-gradient-to-br from-green-50 to-green-100 border-green-200">
-                            <div className="text-center">
-                                <p className="text-sm font-medium text-green-600">Patrimonio</p>
-                                <p className="text-2xl font-bold text-green-900 mt-1">
-                                    {formatCurrency(totals?.total_equity || 0)}
-                                </p>
-                            </div>
-                        </Card>
-                    </div>
-
-                    {/* Tabla de Balance General */}
-                    <Card title='Balance General' subtitle={`Total: ${allAccounts.length} cuentas`}>
-                        <div className='overflow-x-auto max-h-[600px] overflow-y-auto'>
-                            <table className='min-w-full divide-y divide-gray-200'>
-                                <thead className='bg-gray-50 sticky top-0 z-10 shadow-sm'>
-                                    <tr>
-                                        <th className='hidden md:table-cell px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase bg-gray-50'>
-                                            Código
-                                        </th>
-                                        <th className='hidden md:table-cell px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase bg-gray-50'>
-                                            Nombre de cuenta
-                                        </th>
-                                        <th className='hidden md:table-cell px-3 py-2 text-right text-xs font-medium text-blue-600 uppercase bg-gray-50'>
-                                            Activo
-                                        </th>
-                                        <th className='hidden md:table-cell px-3 py-2 text-right text-xs font-medium text-red-600 uppercase bg-gray-50'>
-                                            Pasivo
-                                        </th>
-                                        <th className='md:hidden px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase bg-gray-50'>
-                                            Cuenta
-                                        </th>
-                                    </tr>
-                                </thead>
-                                <tbody className='bg-white divide-y divide-gray-200'>
-                                    {allAccounts.map((account: any, index: number) => (
-                                        <Fragment key={index}>
-                                            <tr className='hover:bg-gray-50'>
-                                                {/* Desktop */}
-                                                <td className='hidden md:table-cell px-3 py-3 whitespace-nowrap text-xs font-medium text-gray-900'>
-                                                    {account.accountCode}
-                                                </td>
-                                                <td className='hidden md:table-cell px-3 py-3 text-xs text-gray-900'>
-                                                    {account.accountName}
-                                                </td>
-                                                <td className='hidden md:table-cell px-3 py-3 whitespace-nowrap text-xs text-right text-blue-700 font-medium'>
-                                                    {account.assetAmount > 0 ? formatCurrency(account.assetAmount) : '-'}
-                                                </td>
-                                                <td className='hidden md:table-cell px-3 py-3 whitespace-nowrap text-xs text-right text-red-700 font-medium'>
-                                                    {account.liabilityAmount > 0 ? formatCurrency(account.liabilityAmount) : '-'}
-                                                </td>
-
-                                                {/* Mobile */}
-                                                <td
-                                                    className='md:hidden px-4 py-4 cursor-pointer'
-                                                    onClick={() => toggleRow(index)}
-                                                >
-                                                    <div className='flex items-center justify-between'>
-                                                        <div className='flex-1 min-w-0'>
-                                                            <div className='text-sm font-medium text-gray-900'>
-                                                                {account.accountCode} - {account.accountName}
-                                                            </div>
-                                                        </div>
-                                                        <div className='ml-3 flex-shrink-0'>
-                                                            {expandedRows.has(index) ? (
-                                                                <ChevronDown className='h-5 w-5 text-gray-400' />
-                                                            ) : (
-                                                                <ChevronRight className='h-5 w-5 text-gray-400' />
-                                                            )}
-                                                        </div>
-                                                    </div>
-                                                </td>
-                                            </tr>
-
-                                            {/* Fila expandida (solo mobile) */}
-                                            {expandedRows.has(index) && (
-                                                <tr key={`expanded-${index}`} className='md:hidden bg-gray-50'>
-                                                    <td colSpan={5} className='px-4 py-4'>
-                                                        <div className='space-y-2 text-sm'>
-                                                            <div className='flex justify-between items-center'>
-                                                                <span className='text-gray-600 font-medium'>Código:</span>
-                                                                <span className='text-gray-900 font-semibold'>{account.accountCode}</span>
-                                                            </div>
-                                                            <div className='flex justify-between items-center'>
-                                                                <span className='text-gray-600 font-medium'>Nombre:</span>
-                                                                <span className='text-gray-900 text-right text-xs'>{account.accountName}</span>
-                                                            </div>
-                                                            <div className='border-t border-gray-200 my-2'></div>
-                                                            <div className='flex justify-between items-center'>
-                                                                <span className='text-blue-700 font-medium'>Activo:</span>
-                                                                <span className='text-blue-700 font-semibold text-lg'>
-                                                                    {account.assetAmount > 0 ? formatCurrency(account.assetAmount) : '-'}
-                                                                </span>
-                                                            </div>
-                                                            <div className='flex justify-between items-center'>
-                                                                <span className='text-red-700 font-medium'>Pasivo:</span>
-                                                                <span className='text-red-700 font-semibold text-lg'>
-                                                                    {account.liabilityAmount > 0 ? formatCurrency(account.liabilityAmount) : '-'}
-                                                                </span>
-                                                            </div>
-                                                        </div>
-                                                    </td>
-                                                </tr>
-                                            )}
-                                        </Fragment>
-                                    ))}
-                                </tbody>
-                            </table>
-                        </div>
-
-                        {/* Totales al pie */}
-                        <div className="mt-4 pt-4 border-t-2 border-gray-300 space-y-2">
-                            <div className="flex justify-between items-center px-3">
-                                <span className="text-sm font-bold text-blue-900">Total Activos:</span>
-                                <span className="text-lg font-bold text-blue-700">{formatCurrency(totals?.total_assets || 0)}</span>
-                            </div>
-                            <div className="flex justify-between items-center px-3">
-                                <span className="text-sm font-bold text-red-900">Total Pasivos:</span>
-                                <span className="text-lg font-bold text-red-700">{formatCurrency(totals?.total_liabilities || 0)}</span>
-                            </div>
-                            <div className="flex justify-between items-center px-3">
-                                <span className="text-sm font-bold text-green-900">Patrimonio:</span>
-                                <span className="text-lg font-bold text-green-700">{formatCurrency(totals?.total_equity || 0)}</span>
-                            </div>
-                            <div className="border-t border-gray-300 my-2"></div>
-                            <div className="flex justify-between items-center px-3 bg-gray-100 py-2 rounded">
-                                <span className="text-sm font-bold text-gray-700">Pasivos + Patrimonio:</span>
-                                <span className="text-lg font-bold text-gray-900">
-                                    {formatCurrency((totals?.total_liabilities || 0) + (totals?.total_equity || 0))}
-                                </span>
-                            </div>
-                            {Math.abs(totals?.balance_check || 0) > 0.01 ? (
-                                <div className="flex justify-between items-center px-3 bg-red-50 py-2 rounded">
-                                    <span className="text-xs text-red-600 font-bold">Diferencia (debe ser 0):</span>
-                                    <span className="text-sm text-red-600 font-bold">{formatCurrency(totals?.balance_check || 0)}</span>
-                                </div>
-                            ) : (
-                                <div className="text-center py-2 bg-green-50 rounded">
-                                    <span className="text-xs text-green-600 font-bold">✓ Balance cuadrado</span>
-                                </div>
-                            )}
-                        </div>
-                    </Card>
-                </div>
-            </div>
+            <tr className={`${bgColor} font-bold text-sm`}>
+                <td className={`px-3 py-3 ${textColor} uppercase`}>{label}</td>
+                {availableMonths.map(month => {
+                    const amount = amounts[month] || 0
+                    return (
+                        <td key={month} className={`px-3 py-3 text-right ${textColor}`}>
+                            {formatCurrency(amount)}
+                        </td>
+                    )
+                })}
+                <td className={`px-3 py-3 text-right ${textColor}`}>100.0%</td>
+            </tr>
         )
+    }
+
+    // Calcular totales por mes
+    const totalCurrentAssetsByMonth: { [key: string]: number } = {}
+    const totalNonCurrentAssetsByMonth: { [key: string]: number } = {}
+    const totalAssetsByMonth: { [key: string]: number } = {}
+    const totalCurrentLiabilitiesByMonth: { [key: string]: number } = {}
+    const totalNonCurrentLiabilitiesByMonth: { [key: string]: number } = {}
+    const totalLiabilitiesByMonth: { [key: string]: number } = {}
+    const totalEquityByMonth: { [key: string]: number } = {}
+    const totalLiabilitiesAndEquityByMonth: { [key: string]: number } = {}
+
+    availableMonths.forEach(month => {
+        const data = yearData.months[month]
+        totalCurrentAssetsByMonth[month] = data.totals.totalCurrentAssets
+        totalNonCurrentAssetsByMonth[month] = data.totals.totalNonCurrentAssets
+        totalAssetsByMonth[month] = data.totals.totalAssets
+        totalCurrentLiabilitiesByMonth[month] = data.totals.totalCurrentLiabilities
+        totalNonCurrentLiabilitiesByMonth[month] = data.totals.totalNonCurrentLiabilities
+        totalLiabilitiesByMonth[month] = data.totals.totalLiabilities
+        totalEquityByMonth[month] = data.totals.totalEquity
+        totalLiabilitiesAndEquityByMonth[month] = data.totals.totalLiabilitiesAndEquity
+    })
+
+    return (
+        <div>
+            <Header
+                title='Balance General Comparativo'
+                subtitle={`Para Análisis Vertical y Horizontal - Año ${selectedYear}`}
+            />
+
+            <div className='p-8 space-y-6'>
+                {/* Selector de Año */}
+                <div className='flex justify-end'>
+                    <div className='bg-white rounded-lg shadow-sm border border-gray-200 inline-flex'>
+                        <div className='p-4'>
+                            <div className='flex items-center gap-3'>
+                                <Calendar className='h-5 w-5 text-blue-600' />
+                                <span className='text-sm font-medium text-gray-700'>Año:</span>
+                                <select
+                                    value={selectedYear}
+                                    onChange={(e) => setSelectedYear(e.target.value)}
+                                    className='border border-gray-300 rounded px-3 py-1 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500'
+                                >
+                                    {availableYears.map(year => (
+                                        <option key={year} value={year}>{year}</option>
+                                    ))}
+                                </select>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                {/* Tabla Comparativa */}
+                <Card>
+                    <div className='overflow-x-auto'>
+                        <table className='min-w-full divide-y divide-gray-200'>
+                            <thead className='bg-gray-100 sticky top-0'>
+                                <tr>
+                                    <th className='px-3 py-3 text-left text-xs font-bold text-gray-700 uppercase'>
+                                        Cuenta
+                                    </th>
+                                    {availableMonths.map(month => (
+                                        <th key={month} className='px-3 py-3 text-center text-xs font-bold text-gray-700 uppercase'>
+                                            {MONTH_NAMES[parseInt(month) - 1]}
+                                        </th>
+                                    ))}
+                                    <th className='px-3 py-3 text-center text-xs font-bold text-gray-700 uppercase'>
+                                        Análisis<br/>Vertical %
+                                    </th>
+                                </tr>
+                            </thead>
+                            <tbody className='bg-white divide-y divide-gray-200'>
+                                {/* SECCIÓN ACTIVO */}
+                                <tr className='bg-green-700'>
+                                    <td colSpan={availableMonths.length + 2} className='px-3 py-2 text-sm font-bold text-white uppercase'>
+                                        ACTIVO
+                                    </td>
+                                </tr>
+
+                                {/* Activo Corriente */}
+                                <tr className='bg-green-100'>
+                                    <td colSpan={availableMonths.length + 2} className='px-3 py-2 text-xs font-bold text-green-800 uppercase'>
+                                        ACTIVO CORRIENTE
+                                    </td>
+                                </tr>
+                                {renderAccountRows(lastMonthData.currentAssets)}
+                                {renderSubtotalRow('Total Activo Corriente', totalCurrentAssetsByMonth, 'bg-green-50', 'text-green-800')}
+
+                                {/* Activo No Corriente */}
+                                <tr className='bg-green-100'>
+                                    <td colSpan={availableMonths.length + 2} className='px-3 py-2 text-xs font-bold text-green-800 uppercase'>
+                                        ACTIVO NO CORRIENTE
+                                    </td>
+                                </tr>
+                                {renderAccountRows(lastMonthData.nonCurrentAssets)}
+                                {renderSubtotalRow('Total Activo No Corriente', totalNonCurrentAssetsByMonth, 'bg-green-50', 'text-green-800')}
+
+                                {/* Total Activo */}
+                                {renderTotalRow('TOTAL ACTIVO', totalAssetsByMonth, 'bg-green-700', 'text-white')}
+
+                                {/* SECCIÓN PASIVO */}
+                                <tr className='bg-orange-600'>
+                                    <td colSpan={availableMonths.length + 2} className='px-3 py-2 text-sm font-bold text-white uppercase'>
+                                        PASIVO
+                                    </td>
+                                </tr>
+
+                                {/* Pasivo Corriente */}
+                                <tr className='bg-orange-100'>
+                                    <td colSpan={availableMonths.length + 2} className='px-3 py-2 text-xs font-bold text-orange-800 uppercase'>
+                                        PASIVO CORRIENTE
+                                    </td>
+                                </tr>
+                                {renderAccountRows(lastMonthData.currentLiabilities)}
+                                {renderSubtotalRow('Total Pasivo Corriente', totalCurrentLiabilitiesByMonth, 'bg-orange-50', 'text-orange-800')}
+
+                                {/* Pasivo No Corriente */}
+                                <tr className='bg-orange-100'>
+                                    <td colSpan={availableMonths.length + 2} className='px-3 py-2 text-xs font-bold text-orange-800 uppercase'>
+                                        PASIVO NO CORRIENTE
+                                    </td>
+                                </tr>
+                                {renderAccountRows(lastMonthData.nonCurrentLiabilities)}
+                                {renderSubtotalRow('Total Pasivo No Corriente', totalNonCurrentLiabilitiesByMonth, 'bg-orange-50', 'text-orange-800')}
+
+                                {/* Total Pasivo */}
+                                {renderTotalRow('TOTAL PASIVO', totalLiabilitiesByMonth, 'bg-orange-600', 'text-white')}
+
+                                {/* SECCIÓN PATRIMONIO */}
+                                <tr className='bg-blue-700'>
+                                    <td colSpan={availableMonths.length + 2} className='px-3 py-2 text-sm font-bold text-white uppercase'>
+                                        PATRIMONIO
+                                    </td>
+                                </tr>
+                                {renderAccountRows(lastMonthData.equity)}
+                                {renderTotalRow('TOTAL PATRIMONIO', totalEquityByMonth, 'bg-blue-600', 'text-white')}
+
+                                {/* Total Pasivo + Patrimonio */}
+                                {renderTotalRow('TOTAL PASIVO + PATRIMONIO', totalLiabilitiesAndEquityByMonth, 'bg-blue-800', 'text-white')}
+                            </tbody>
+                        </table>
+                    </div>
+                </Card>
+            </div>
+        </div>
+    )
 }
