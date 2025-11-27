@@ -41,7 +41,7 @@ export default function BalanceGeneralPage() {
     const [loading, setLoading] = useState(true)
     const [error, setError] = useState<string | null>(null)
     const [activeTab, setActiveTab] = useState<'general' | 'vertical' | 'horizontal'>('general')
-    
+
     // Estado para drag scroll
     const [isDragging, setIsDragging] = useState(false)
     const [startX, setStartX] = useState(0)
@@ -81,7 +81,7 @@ export default function BalanceGeneralPage() {
                 const res = await fetch('/api/data/balance-general')
                 if (!res.ok) throw new Error('Error al cargar años disponibles')
                 const result = await res.json()
-                
+
                 if (result.availableYears && result.availableYears.length > 0) {
                     setAvailableYears(result.availableYears)
                     setSelectedYear(result.availableYears[0])
@@ -163,14 +163,14 @@ export default function BalanceGeneralPage() {
 
     // Obtener lista de meses disponibles en el año
     const availableMonths = Object.keys(yearData.months).sort()
-    
+
     // Crear estructura de cuentas unificadas
     const accountsStructure = new Map<string, { code: string, name: string, monthlyAmounts: { [key: string]: number }, verticalAnalysis: number }>()
 
     // Recopilar todas las cuentas únicas
     availableMonths.forEach(month => {
         const monthData = yearData.months[month]
-        
+
         const processAccounts = (accounts: Account[]) => {
             accounts.forEach(account => {
                 if (!accountsStructure.has(account.accountCode)) {
@@ -282,31 +282,28 @@ export default function BalanceGeneralPage() {
                     <div className="bg-gray-100 p-1 rounded-lg inline-flex">
                         <button
                             onClick={() => setActiveTab('general')}
-                            className={`px-4 py-2 rounded-md text-sm font-medium transition-all ${
-                                activeTab === 'general'
-                                    ? 'bg-orange-500 text-white shadow-sm'
-                                    : 'text-gray-600 hover:text-gray-900 hover:bg-gray-200'
-                            }`}
+                            className={`px-4 py-2 rounded-md text-sm font-medium transition-all ${activeTab === 'general'
+                                ? 'bg-orange-500 text-white shadow-sm'
+                                : 'text-gray-600 hover:text-gray-900 hover:bg-gray-200'
+                                }`}
                         >
                             📊 Balance General
                         </button>
                         <button
                             onClick={() => setActiveTab('vertical')}
-                            className={`px-4 py-2 rounded-md text-sm font-medium transition-all ${
-                                activeTab === 'vertical'
-                                    ? 'bg-orange-500 text-white shadow-sm'
-                                    : 'text-gray-600 hover:text-gray-900 hover:bg-gray-200'
-                            }`}
+                            className={`px-4 py-2 rounded-md text-sm font-medium transition-all ${activeTab === 'vertical'
+                                ? 'bg-orange-500 text-white shadow-sm'
+                                : 'text-gray-600 hover:text-gray-900 hover:bg-gray-200'
+                                }`}
                         >
                             📈 Análisis Vertical
                         </button>
                         <button
                             onClick={() => setActiveTab('horizontal')}
-                            className={`px-4 py-2 rounded-md text-sm font-medium transition-all ${
-                                activeTab === 'horizontal'
-                                    ? 'bg-orange-500 text-white shadow-sm'
-                                    : 'text-gray-600 hover:text-gray-900 hover:bg-gray-200'
-                            }`}
+                            className={`px-4 py-2 rounded-md text-sm font-medium transition-all ${activeTab === 'horizontal'
+                                ? 'bg-orange-500 text-white shadow-sm'
+                                : 'text-gray-600 hover:text-gray-900 hover:bg-gray-200'
+                                }`}
                         >
                             📉 Análisis Horizontal
                         </button>
@@ -334,126 +331,130 @@ export default function BalanceGeneralPage() {
 
                 {/* Contenido según pestaña activa */}
                 {activeTab === 'general' && (
-                <Card>
-                    <div 
-                        className={`overflow-x-auto max-h-[calc(100vh-250px)] ${isDragging ? 'cursor-grabbing select-none' : 'cursor-grab'}`}
-                        onMouseDown={handleMouseDown}
-                        onMouseMove={handleMouseMove}
-                        onMouseUp={handleMouseUpOrLeave}
-                        onMouseLeave={handleMouseUpOrLeave}
-                    >
-                        <table className='min-w-full divide-y divide-gray-200'>
-                            <thead className='bg-gray-100 sticky top-0 z-30'>
-                                <tr>
-                                    <th className='px-3 py-3 text-left text-sm font-bold text-gray-700 uppercase sticky left-0 bg-gray-100 z-40'>
-                                        Cuenta
-                                    </th>
-                                    {availableMonths.map(month => (
-                                        <th key={month} className='px-3 py-3 text-center text-sm font-bold text-gray-700 uppercase'>
-                                            {MONTH_NAMES[parseInt(month) - 1]}
+                    <Card>
+                        <div
+                            className={`overflow-x-auto max-h-[calc(100vh-250px)] ${isDragging ? 'cursor-grabbing select-none' : 'cursor-grab'}`}
+                            onMouseDown={handleMouseDown}
+                            onMouseMove={handleMouseMove}
+                            onMouseUp={handleMouseUpOrLeave}
+                            onMouseLeave={handleMouseUpOrLeave}
+                        >
+                            <table className='min-w-full divide-y divide-gray-200'>
+                                <thead className='bg-gray-100 sticky top-0 z-30'>
+                                    <tr>
+                                        <th className='px-3 py-3 text-left text-sm font-bold text-gray-700 uppercase sticky left-0 bg-gray-100 z-40'>
+                                            Cuenta
                                         </th>
-                                    ))}
-                                </tr>
-                                 {/* Línea divisoria */}
-                                <tr>
-                                    <td colSpan={availableMonths.length + 1} className='border-t-3 border-black'></td>
-                                </tr>
-                            </thead>
-                            <tbody className='bg-white divide-y divide-gray-200'>
-                                {/* SECCIÓN ACTIVO */}
-                                <tr className='bg-green-400'>
-                                    <td colSpan={availableMonths.length + 1} className='px-3 py-2 text-sm font-bold text-gray-900 uppercase'>
-                                        ACTIVO
-                                    </td>
-                                </tr>
+                                        {availableMonths.map(month => (
+                                            <th key={month} className='px-3 py-3 text-center text-sm font-bold text-gray-700 uppercase'>
+                                                {MONTH_NAMES[parseInt(month) - 1]}
+                                            </th>
+                                        ))}
+                                    </tr>
+                                    {/* Línea divisoria */}
+                                    <tr>
+                                        <td colSpan={availableMonths.length + 1} className='border-t-3 border-black'></td>
+                                    </tr>
+                                </thead>
+                                <tbody className='bg-white divide-y divide-gray-200'>
+                                    {/* SECCIÓN ACTIVO */}
+                                    <tr className='bg-green-400'>
+                                        <td colSpan={availableMonths.length + 1} className='px-3 py-2 text-sm font-bold text-gray-900 uppercase'>
+                                            ACTIVO
+                                        </td>
+                                    </tr>
 
-                                {/* Activo Corriente */}
-                                <tr className='bg-green-300'>
-                                    <td colSpan={availableMonths.length + 1} className='px-3 py-2 text-xs font-bold text-gray-900 uppercase'>
-                                        ACTIVO CORRIENTE
-                                    </td>
-                                </tr>
-                                {renderAccountRows(lastMonthData.currentAssets, 'bg-green-50', 'bg-green-50')}
-                                {renderSubtotalRow('Total Activo Corriente', totalCurrentAssetsByMonth, 'bg-green-200', 'text-gray-900')}
-                                     {/* Línea divisoria */}
-                                <tr>
-                                    <td colSpan={availableMonths.length + 1} className='border-t-2 border-black'></td>
-                                </tr>
-                                {/* Activo No Corriente */}
-                                <tr className='bg-green-300'>
-                                    <td colSpan={availableMonths.length + 1} className='px-3 py-2 text-xs font-bold text-gray-900 uppercase'>
-                                        ACTIVO NO CORRIENTE
-                                    </td>
-                                </tr>
-                                {renderAccountRows(lastMonthData.nonCurrentAssets, 'bg-green-50', 'bg-green-50')}
-                                {renderSubtotalRow('Total Activo No Corriente', totalNonCurrentAssetsByMonth, 'bg-green-200', 'text-gray-900')}
+                                    {/* Activo Corriente */}
+                                    <tr className='bg-green-300'>
+                                        <td colSpan={availableMonths.length + 1} className='px-3 py-2 text-xs font-bold text-gray-900 uppercase'>
+                                            ACTIVO CORRIENTE
+                                        </td>
+                                    </tr>
+                                    {renderAccountRows(lastMonthData.currentAssets, 'bg-green-50', 'bg-green-50')}
+                                    {renderSubtotalRow('Total Activo Corriente', totalCurrentAssetsByMonth, 'bg-green-200', 'text-gray-900')}
+                                    {/* Línea divisoria */}
+                                    <tr>
+                                        <td colSpan={availableMonths.length + 1} className='border-t-2 border-black'></td>
+                                    </tr>
+                                    {/* Activo No Corriente */}
+                                    <tr className='bg-green-300'>
+                                        <td colSpan={availableMonths.length + 1} className='px-3 py-2 text-xs font-bold text-gray-900 uppercase'>
+                                            ACTIVO NO CORRIENTE
+                                        </td>
+                                    </tr>
+                                    {renderAccountRows(lastMonthData.nonCurrentAssets, 'bg-green-50', 'bg-green-50')}
+                                    {renderSubtotalRow('Total Activo No Corriente', totalNonCurrentAssetsByMonth, 'bg-green-200', 'text-gray-900')}
 
-                                {/* Total Activo */}
-                                {renderTotalRow('TOTAL ACTIVO', totalAssetsByMonth, 'bg-green-400', 'text-black')}
+                                    {/* Total Activo */}
+                                    {renderTotalRow('TOTAL ACTIVO', totalAssetsByMonth, 'bg-green-400', 'text-black')}
 
+                                    {/* Línea divisoria */}
+                                    <tr>
+                                        <td colSpan={availableMonths.length + 1} className='border-t-3 border-black'></td>
+                                    </tr>
+
+                                    {/* SECCIÓN PASIVO */}
+                                    <tr className='bg-orange-400'>
+                                        <td colSpan={availableMonths.length + 1} className='px-3 py-2 text-sm font-bold text-gray-900 uppercase'>
+                                            PASIVO
+                                        </td>
+                                    </tr>
+
+                                    {/* Pasivo Corriente */}
+                                    <tr className='bg-orange-200'>
+                                        <td colSpan={availableMonths.length + 1} className='px-3 py-2 text-xs font-bold text-gray-900 uppercase'>
+                                            PASIVO CORRIENTE
+                                        </td>
+                                    </tr>
+                                    {renderAccountRows(lastMonthData.currentLiabilities, 'bg-orange-50', 'bg-orange-50')}
+                                    {renderSubtotalRow('Total Pasivo Corriente', totalCurrentLiabilitiesByMonth, 'bg-orange-100', 'text-gray-900')}
+                                    {/* Línea divisoria */}
+                                    <tr>
+                                        <td colSpan={availableMonths.length + 1} className='border-t-2 border-black'></td>
+                                    </tr>
+                                    {/* Pasivo No Corriente */}
+                                    <tr className='bg-orange-200'>
+                                        <td colSpan={availableMonths.length + 1} className='px-3 py-2 text-xs font-bold text-gray-900 uppercase'>
+                                            PASIVO NO CORRIENTE
+                                        </td>
+                                    </tr>
+                                    {renderAccountRows(lastMonthData.nonCurrentLiabilities, 'bg-orange-50', 'bg-orange-50')}
+                                    {renderSubtotalRow('Total Pasivo No Corriente', totalNonCurrentLiabilitiesByMonth, 'bg-orange-100', 'text-gray-900')}
+
+                                    {/* Total Pasivo */}
+                                    {renderTotalRow('TOTAL PASIVO', totalLiabilitiesByMonth, 'bg-orange-400', 'text-black')}
+
+                                    {/* Línea divisoria */}
+                                    <tr>
+                                        <td colSpan={availableMonths.length + 1} className='border-t-3 border-black'></td>
+                                    </tr>
+
+                                    {/* SECCIÓN PATRIMONIO */}
+                                    <tr className='bg-blue-400'>
+                                        <td colSpan={availableMonths.length + 1} className='px-3 py-2 text-sm font-bold text-gray-900 uppercase'>
+                                            PATRIMONIO
+                                        </td>
+                                    </tr>
+                                    {renderAccountRows(lastMonthData.equity, 'bg-blue-300', 'bg-blue-300')}
+                                    {renderTotalRow('TOTAL PATRIMONIO', totalEquityByMonth, 'bg-blue-100', 'text-gray-900')}
+
+                                    {/* Total Pasivo + Patrimonio */}
+                                    {renderTotalRow('TOTAL PASIVO + PATRIMONIO', totalLiabilitiesAndEquityByMonth, 'bg-blue-400', 'text-black')}
+                                </tbody>
                                 {/* Línea divisoria */}
                                 <tr>
-                                    <td colSpan={availableMonths.length + 1} className='border-t-3 border-black'></td>
+                                    <td colSpan={availableMonths.length * 2 + 1} className='border-t-3 border-gray-900'></td>
                                 </tr>
-
-                                {/* SECCIÓN PASIVO */}
-                                <tr className='bg-orange-400'>
-                                    <td colSpan={availableMonths.length + 1} className='px-3 py-2 text-sm font-bold text-gray-900 uppercase'>
-                                        PASIVO
-                                    </td>
-                                </tr>
-
-                                {/* Pasivo Corriente */}
-                                <tr className='bg-orange-200'>
-                                    <td colSpan={availableMonths.length + 1} className='px-3 py-2 text-xs font-bold text-gray-900 uppercase'>
-                                        PASIVO CORRIENTE
-                                    </td>
-                                </tr>
-                                {renderAccountRows(lastMonthData.currentLiabilities, 'bg-orange-50', 'bg-orange-50')}
-                                {renderSubtotalRow('Total Pasivo Corriente', totalCurrentLiabilitiesByMonth, 'bg-orange-100', 'text-gray-900')}
-                                     {/* Línea divisoria */}
-                                <tr>
-                                    <td colSpan={availableMonths.length + 1} className='border-t-2 border-black'></td>
-                                </tr>
-                                {/* Pasivo No Corriente */}
-                                <tr className='bg-orange-200'>
-                                    <td colSpan={availableMonths.length + 1} className='px-3 py-2 text-xs font-bold text-gray-900 uppercase'>
-                                        PASIVO NO CORRIENTE
-                                    </td>
-                                </tr>
-                                {renderAccountRows(lastMonthData.nonCurrentLiabilities, 'bg-orange-50', 'bg-orange-50')}
-                                {renderSubtotalRow('Total Pasivo No Corriente', totalNonCurrentLiabilitiesByMonth, 'bg-orange-100', 'text-gray-900')}
-
-                                {/* Total Pasivo */}
-                                {renderTotalRow('TOTAL PASIVO', totalLiabilitiesByMonth, 'bg-orange-400', 'text-black')}
-
-                                {/* Línea divisoria */}
-                                <tr>
-                                    <td colSpan={availableMonths.length + 1} className='border-t-3 border-black'></td>
-                                </tr>
-
-                                {/* SECCIÓN PATRIMONIO */}
-                                <tr className='bg-blue-400'>
-                                    <td colSpan={availableMonths.length + 1} className='px-3 py-2 text-sm font-bold text-gray-900 uppercase'>
-                                        PATRIMONIO
-                                    </td>
-                                </tr>
-                                {renderAccountRows(lastMonthData.equity, 'bg-blue-300', 'bg-blue-300')}
-                                {renderTotalRow('TOTAL PATRIMONIO', totalEquityByMonth, 'bg-blue-100', 'text-gray-900')}
-
-                                {/* Total Pasivo + Patrimonio */}
-                                {renderTotalRow('TOTAL PASIVO + PATRIMONIO', totalLiabilitiesAndEquityByMonth, 'bg-blue-400', 'text-black')}
-                            </tbody>
-                        </table>
-                    </div>
-                </Card>
+                            </table>
+                        </div>
+                    </Card>
                 )}
 
                 {/* Análisis Vertical */}
                 {activeTab === 'vertical' && (
                     <Card>
-                        
-                        <div 
+
+                        <div
                             className={`overflow-x-auto max-h-[calc(100vh-250px)] ${isDragging ? 'cursor-grabbing select-none' : 'cursor-grab'}`}
                             onMouseDown={handleMouseDown}
                             onMouseMove={handleMouseMove}
@@ -481,18 +482,22 @@ export default function BalanceGeneralPage() {
                                     </tr>
                                 </thead>
                                 <tbody className='bg-white divide-y divide-gray-200'>
-                                    {/* ACTIVOS */}
-                                    <tr className='bg-green-700'>
-                                        <td colSpan={availableMonths.length * 2 + 1} className='px-3 py-2 text-sm font-bold text-white uppercase'>ACTIVO</td>
+                                    {/* Línea divisoria */}
+                                    <tr>
+                                        <td colSpan={availableMonths.length * 2 + 1} className='border-t-12 border-gray-900'></td>
                                     </tr>
-                                    <tr className='bg-green-100'>
-                                        <td colSpan={availableMonths.length * 2 + 1} className='px-3 py-2 text-xs font-bold text-green-800 uppercase'>ACTIVO CORRIENTE</td>
+                                    {/* ACTIVOS */}
+                                    <tr className='bg-green-400'>
+                                        <td colSpan={availableMonths.length * 2 + 1} className='px-3 py-2 text-sm font-bold text-gray-900 uppercase'>ACTIVO</td>
+                                    </tr>
+                                    <tr className='bg-green-300'>
+                                        <td colSpan={availableMonths.length * 2 + 1} className='px-3 py-2 text-xs font-bold text-gray-900 uppercase'>ACTIVO CORRIENTE</td>
                                     </tr>
                                     {lastMonthData.currentAssets.map((account, idx) => {
                                         const accountData = accountsStructure.get(account.accountCode)
                                         return (
-                                            <tr key={`va-ca-${idx}`} className='hover:bg-gray-50'>
-                                                <td className='px-3 py-2 text-xs text-gray-900 sticky left-0 bg-white z-[5]'>{account.accountName}</td>
+                                            <tr key={`va-ca-${idx}`} className='group bg-green-50 hover:bg-white'>
+                                                <td className='px-3 py-2 text-xs text-black sticky left-0 bg-green-50 group-hover:bg-white z-[5]'>{account.accountName}</td>
                                                 {availableMonths.map(month => {
                                                     const value = accountData?.monthlyAmounts[month] || 0
                                                     const total = totalAssetsByMonth[month] || 1
@@ -507,29 +512,33 @@ export default function BalanceGeneralPage() {
                                             </tr>
                                         )
                                     })}
-                                    <tr className='bg-green-50 font-bold'>
-                                        <td className='px-3 py-2 text-xs text-green-800 sticky left-0 bg-green-50 z-[5]'>Total Activo Corriente</td>
+                                    <tr className='group bg-green-200 font-bold hover:bg-white'>
+                                        <td className='px-3 py-2 text-xs text-gray-900 sticky left-0 bg-green-200 group-hover:bg-white z-[5]'>Total Activo Corriente</td>
                                         {availableMonths.map(month => {
                                             const value = totalCurrentAssetsByMonth[month]
                                             const total = totalAssetsByMonth[month] || 1
                                             const percentage = (value / total) * 100
                                             return (
                                                 <React.Fragment key={`va-tca-${month}`}>
-                                                    <td className='px-3 py-2 text-xs text-right text-green-800 border-l border-gray-200'>{formatCurrency(value)}</td>
-                                                    <td className='px-3 py-2 text-xs text-right text-green-800'>{percentage.toFixed(1)}%</td>
+                                                    <td className='px-3 py-2 text-xs text-right text-gray-900 border-l border-gray-200'>{formatCurrency(value)}</td>
+                                                    <td className='px-3 py-2 text-xs text-right text-gray-900'>{percentage.toFixed(1)}%</td>
                                                 </React.Fragment>
                                             )
                                         })}
                                     </tr>
+                                    {/* Línea divisoria */}
+                                    <tr>
+                                        <td colSpan={availableMonths.length * 2 + 1} className='border-t-2 border-gray-500'></td>
+                                    </tr>
 
-                                    <tr className='bg-green-100'>
-                                        <td colSpan={availableMonths.length * 2 + 1} className='px-3 py-2 text-xs font-bold text-green-800 uppercase'>ACTIVO NO CORRIENTE</td>
+                                    <tr className='bg-green-300'>
+                                        <td colSpan={availableMonths.length * 2 + 1} className='px-3 py-2 text-xs font-bold text-gray-900 uppercase'>ACTIVO NO CORRIENTE</td>
                                     </tr>
                                     {lastMonthData.nonCurrentAssets.map((account, idx) => {
                                         const accountData = accountsStructure.get(account.accountCode)
                                         return (
-                                            <tr key={`va-nca-${idx}`} className='hover:bg-gray-50'>
-                                                <td className='px-3 py-2 text-xs text-gray-900 sticky left-0 bg-white z-[5]'>{account.accountName}</td>
+                                            <tr key={`va-nca-${idx}`} className='group bg-green-50 hover:bg-white'>
+                                                <td className='px-3 py-2 text-xs text-black sticky left-0 bg-green-50 group-hover:bg-white z-[5]'>{account.accountName}</td>
                                                 {availableMonths.map(month => {
                                                     const value = accountData?.monthlyAmounts[month] || 0
                                                     const total = totalAssetsByMonth[month] || 1
@@ -544,148 +553,169 @@ export default function BalanceGeneralPage() {
                                             </tr>
                                         )
                                     })}
-                                    <tr className='bg-green-50 font-bold'>
-                                        <td className='px-3 py-2 text-xs text-green-800 sticky left-0 bg-green-50 z-[5]'>Total Activo No Corriente</td>
+                                    <tr className='group bg-green-200 font-bold hover:bg-white'>
+                                        <td className='px-3 py-2 text-xs text-gray-900 sticky left-0 bg-green-200 group-hover:bg-white z-[5]'>Total Activo No Corriente</td>
                                         {availableMonths.map(month => {
                                             const value = totalNonCurrentAssetsByMonth[month]
                                             const total = totalAssetsByMonth[month] || 1
                                             const percentage = (value / total) * 100
                                             return (
                                                 <React.Fragment key={`va-tnca-${month}`}>
-                                                    <td className='px-3 py-2 text-xs text-right text-green-800 border-l border-gray-200'>{formatCurrency(value)}</td>
-                                                    <td className='px-3 py-2 text-xs text-right text-green-800'>{percentage.toFixed(1)}%</td>
+                                                    <td className='px-3 py-2 text-xs text-right text-gray-900 border-l border-gray-200'>{formatCurrency(value)}</td>
+                                                    <td className='px-3 py-2 text-xs text-right text-gray-900'>{percentage.toFixed(1)}%</td>
                                                 </React.Fragment>
                                             )
                                         })}
                                     </tr>
-                                    <tr className='bg-green-700 font-bold text-sm'>
-                                        <td className='px-3 py-3 text-white uppercase sticky left-0 bg-green-700 z-[5]'>TOTAL ACTIVO</td>
+                                    <tr className='group bg-green-400 font-bold text-sm hover:bg-green-200'>
+                                        <td className='px-3 py-3 text-black uppercase sticky left-0 bg-green-400 group-hover:bg-green-200 z-[5]'>TOTAL ACTIVO</td>
                                         {availableMonths.map(month => (
                                             <React.Fragment key={`va-ta-${month}`}>
-                                                <td className='px-3 py-3 text-right text-white border-l border-green-600'>{formatCurrency(totalAssetsByMonth[month])}</td>
-                                                <td className='px-3 py-3 text-right text-white'>100.0%</td>
+                                                <td className='px-3 py-3 text-right text-black border-l border-green-300'>{formatCurrency(totalAssetsByMonth[month])}</td>
+                                                <td className='px-3 py-3 text-right text-black'>100.0%</td>
                                             </React.Fragment>
                                         ))}
                                     </tr>
 
-                                    {/* PASIVOS */}
-                                    <tr className='bg-orange-600'>
-                                        <td colSpan={availableMonths.length * 2 + 1} className='px-3 py-2 text-sm font-bold text-white uppercase'>PASIVO</td>
+                                    {/* Línea divisoria */}
+                                    <tr>
+                                        <td colSpan={availableMonths.length * 2 + 1} className='border-t-4 border-gray-900'></td>
                                     </tr>
-                                    <tr className='bg-orange-100'>
-                                        <td colSpan={availableMonths.length * 2 + 1} className='px-3 py-2 text-xs font-bold text-orange-800 uppercase'>PASIVO CORRIENTE</td>
+
+                                    {/* PASIVOS */}
+                                    <tr className='bg-orange-400'>
+                                        <td colSpan={availableMonths.length * 2 + 1} className='px-3 py-2 text-sm font-bold text-gray-900 uppercase'>PASIVO</td>
+                                    </tr>
+                                    <tr className='bg-orange-200'>
+                                        <td colSpan={availableMonths.length * 2 + 1} className='px-3 py-2 text-xs font-bold text-gray-900 uppercase'>PASIVO CORRIENTE</td>
                                     </tr>
                                     {lastMonthData.currentLiabilities.map((account, idx) => {
                                         const accountData = accountsStructure.get(account.accountCode)
                                         return (
-                                            <tr key={`va-cl-${idx}`} className='hover:bg-gray-50'>
-                                                <td className='px-3 py-2 text-xs text-gray-900 sticky left-0 bg-white z-[5]'>{account.accountName}</td>
-                                                {availableMonths.map(month => {
-                                                    const value = accountData?.monthlyAmounts[month] || 0
-                                                    const total = totalLiabilitiesByMonth[month] || 1
-                                                    const percentage = (value / total) * 100
-                                                    return (
-                                                        <React.Fragment key={`va-cl-${idx}-${month}`}>
-                                                            <td className='px-3 py-2 text-xs text-right text-gray-900 border-l border-gray-200'>{formatCurrency(value)}</td>
-                                                            <td className='px-3 py-2 text-xs text-right text-red-700 font-medium'>{percentage.toFixed(1)}%</td>
-                                                        </React.Fragment>
-                                                    )
-                                                })}
-                                            </tr>
-                                        )
-                                    })}
-                                    <tr className='bg-orange-50 font-bold'>
-                                        <td className='px-3 py-2 text-xs text-orange-800 sticky left-0 bg-orange-50 z-[5]'>Total Pasivo Corriente</td>
-                                        {availableMonths.map(month => {
-                                            const value = totalCurrentLiabilitiesByMonth[month]
-                                            const total = totalLiabilitiesByMonth[month] || 1
-                                            const percentage = (value / total) * 100
-                                            return (
-                                                <React.Fragment key={`va-tcl-${month}`}>
-                                                    <td className='px-3 py-2 text-xs text-right text-orange-800 border-l border-gray-200'>{formatCurrency(value)}</td>
-                                                    <td className='px-3 py-2 text-xs text-right text-orange-800'>{percentage.toFixed(1)}%</td>
-                                                </React.Fragment>
-                                            )
-                                        })}
-                                    </tr>
-
-                                    <tr className='bg-orange-100'>
-                                        <td colSpan={availableMonths.length * 2 + 1} className='px-3 py-2 text-xs font-bold text-orange-800 uppercase'>PASIVO NO CORRIENTE</td>
-                                    </tr>
-                                    {lastMonthData.nonCurrentLiabilities.map((account, idx) => {
-                                        const accountData = accountsStructure.get(account.accountCode)
-                                        return (
-                                            <tr key={`va-ncl-${idx}`} className='hover:bg-gray-50'>
-                                                <td className='px-3 py-2 text-xs text-gray-900 sticky left-0 bg-white z-[5]'>{account.accountName}</td>
+                                            <tr key={`va-cl-${idx}`} className='group bg-orange-50 hover:bg-white'>
+                                                <td className='px-3 py-2 text-xs text-black sticky left-0 bg-orange-50 group-hover:bg-white z-[5]'>{account.accountName}</td>
                                                 {availableMonths.map(month => {
                                                     const value = accountData?.monthlyAmounts[month] || 0
                                                     const total = totalLiabilitiesByMonth[month] || 1
                                                     const percentage = (value / total) * 100
                                                     return (
                                                         <React.Fragment key={`va-ncl-${idx}-${month}`}>
-                                                            <td className='px-3 py-2 text-xs text-right text-gray-900 border-l border-gray-200'>{formatCurrency(value)}</td>
-                                                            <td className='px-3 py-2 text-xs text-right text-red-700 font-medium'>{percentage.toFixed(1)}%</td>
+                                                            <td className='px-3 py-2 text-xs text-right font-medium text-gray-900 border-l border-gray-200'>{formatCurrency(value)}</td>
+                                                            <td className='px-3 py-2 text-xs text-right font-medium text-blue-700'>{percentage.toFixed(1)}%</td>
                                                         </React.Fragment>
                                                     )
                                                 })}
                                             </tr>
                                         )
                                     })}
-                                    <tr className='bg-orange-50 font-bold'>
-                                        <td className='px-3 py-2 text-xs text-orange-800 sticky left-0 bg-orange-50 z-[5]'>Total Pasivo No Corriente</td>
+                                    <tr className='group bg-orange-100 font-bold hover:bg-white'>
+                                        <td className='px-3 py-2 text-xs text-gray-900 sticky left-0 bg-orange-100 group-hover:bg-white z-[5]'>Total Pasivo Corriente</td>
+                                        {availableMonths.map(month => {
+                                            const value = totalCurrentLiabilitiesByMonth[month]
+                                            const total = totalLiabilitiesByMonth[month] || 1
+                                            const percentage = (value / total) * 100
+                                            return (
+                                                <React.Fragment key={`va-tcl-${month}`}>
+                                                    <td className='px-3 py-2 text-xs text-right text-gray-900 border-l border-gray-200'>{formatCurrency(value)}</td>
+                                                    <td className='px-3 py-2 text-xs text-right text-gray-900'>{percentage.toFixed(1)}%</td>
+                                                </React.Fragment>
+                                            )
+                                        })}
+                                    </tr>
+                                    {/* Línea divisoria */}
+                                    <tr>
+                                        <td colSpan={availableMonths.length * 2 + 1} className='border-t-2 border-gray-500'></td>
+                                    </tr>
+
+                                    <tr className='bg-orange-200'>
+                                        <td colSpan={availableMonths.length * 2 + 1} className='px-3 py-2 text-xs font-bold text-gray-900 uppercase'>PASIVO NO CORRIENTE</td>
+                                    </tr>
+                                    {lastMonthData.nonCurrentLiabilities.map((account, idx) => {
+                                        const accountData = accountsStructure.get(account.accountCode)
+                                        return (
+                                            <tr key={`va-ncl-${idx}`} className='group bg-orange-50 hover:bg-white'>
+                                                <td className='px-3 py-2 text-xs text-black sticky left-0 bg-orange-50 group-hover:bg-white z-[5]'>{account.accountName}</td>
+                                                {availableMonths.map(month => {
+                                                    const value = accountData?.monthlyAmounts[month] || 0
+                                                    const total = totalLiabilitiesByMonth[month] || 1
+                                                    const percentage = (value / total) * 100
+                                                    return (
+                                                        <React.Fragment key={`va-ncl-${idx}-${month}`}>
+                                                            <td className='px-3 py-2 text-xs text-right font-medium text-gray-900 border-l border-gray-200'>{formatCurrency(value)}</td>
+                                                            <td className='px-3 py-2 text-xs text-right font-medium text-blue-700'>{percentage.toFixed(1)}%</td>
+                                                        </React.Fragment>
+                                                    )
+                                                })}
+                                            </tr>
+                                        )
+                                    })}
+                                    <tr className='group bg-orange-100 font-bold hover:bg-white'>
+                                        <td className='px-3 py-2 text-xs text-gray-900 sticky left-0 bg-orange-100 group-hover:bg-white z-[5]'>Total Pasivo No Corriente</td>
                                         {availableMonths.map(month => {
                                             const value = totalNonCurrentLiabilitiesByMonth[month]
                                             const total = totalLiabilitiesByMonth[month] || 1
                                             const percentage = (value / total) * 100
                                             return (
                                                 <React.Fragment key={`va-tncl-${month}`}>
-                                                    <td className='px-3 py-2 text-xs text-right text-orange-800 border-l border-gray-200'>{formatCurrency(value)}</td>
-                                                    <td className='px-3 py-2 text-xs text-right text-orange-800'>{percentage.toFixed(1)}%</td>
+                                                    <td className='px-3 py-2 text-xs text-right text-gray-800 border-l border-gray-200'>{formatCurrency(value)}</td>
+                                                    <td className='px-3 py-2 text-xs text-right font-medium text-blue-700'>{percentage.toFixed(1)}%</td>
                                                 </React.Fragment>
                                             )
                                         })}
                                     </tr>
-                                    <tr className='bg-orange-600 font-bold text-sm'>
-                                        <td className='px-3 py-3 text-white uppercase sticky left-0 bg-orange-600 z-[5]'>TOTAL PASIVO</td>
+                                    <tr>
+                                        <td colSpan={availableMonths.length * 2 + 1} className='border-t-2 border-gray-500'></td>
+                                    </tr>
+                                    <tr className='group bg-orange-400 font-bold text-sm hover:bg-orange-200'>
+                                        <td className='px-3 py-3 text-black uppercase sticky left-0 bg-orange-400 group-hover:bg-orange-200 z-[5]'>TOTAL PASIVO</td>
                                         {availableMonths.map(month => (
                                             <React.Fragment key={`va-tl-${month}`}>
-                                                <td className='px-3 py-3 text-right text-white border-l border-orange-500'>{formatCurrency(totalLiabilitiesByMonth[month])}</td>
-                                                <td className='px-3 py-3 text-right text-white'>100.0%</td>
+                                                <td className='px-3 py-3 text-right text-black border-l border-orange-200'>{formatCurrency(totalLiabilitiesByMonth[month])}</td>
+                                                <td className='px-3 py-3 text-right text-blue-800'>100.0%</td>
                                             </React.Fragment>
                                         ))}
                                     </tr>
 
+                                    {/* Línea divisoria */}
+                                    <tr>
+                                        <td colSpan={availableMonths.length * 2 + 1} className='border-t-3 border-gray-900'></td>
+                                    </tr>
+
                                     {/* PATRIMONIO */}
-                                    <tr className='bg-blue-700'>
-                                        <td colSpan={availableMonths.length * 2 + 1} className='px-3 py-2 text-sm font-bold text-white uppercase'>PATRIMONIO</td>
+                                    <tr className='bg-blue-400'>
+                                        <td colSpan={availableMonths.length * 2 + 1} className='px-3 py-2 text-sm font-bold text-gray-900 uppercase'>PATRIMONIO</td>
                                     </tr>
                                     {lastMonthData.equity.map((account, idx) => {
                                         const accountData = accountsStructure.get(account.accountCode)
                                         return (
-                                            <tr key={`va-eq-${idx}`} className='hover:bg-gray-50'>
-                                                <td className='px-3 py-2 text-xs text-gray-900 sticky left-0 bg-white z-[5]'>{account.accountName}</td>
+                                            <tr key={`va-eq-${idx}`} className='group bg-blue-300 hover:bg-white'>
+                                                <td className='px-3 py-2 text-xs text-black sticky left-0 bg-blue-300 group-hover:bg-white z-[5]'>{account.accountName}</td>
                                                 {availableMonths.map(month => {
                                                     const value = accountData?.monthlyAmounts[month] || 0
                                                     const total = totalEquityByMonth[month] || 1
                                                     const percentage = (value / total) * 100
                                                     return (
                                                         <React.Fragment key={`va-eq-${idx}-${month}`}>
-                                                            <td className='px-3 py-2 text-xs text-right text-gray-900 border-l border-gray-200'>{formatCurrency(value)}</td>
-                                                            <td className='px-3 py-2 text-xs text-right text-purple-700 font-medium'>{percentage.toFixed(1)}%</td>
+                                                            <td className='px-3 py-2 text-sm text-right text-gray-900 border-l border-gray-200'>{formatCurrency(value)}</td>
+                                                            <td className='px-3 py-2 text-sm text-right text-gray-900 font-medium'>{percentage.toFixed(1)}%</td>
                                                         </React.Fragment>
                                                     )
                                                 })}
                                             </tr>
                                         )
                                     })}
-                                    <tr className='bg-blue-600 font-bold text-sm'>
-                                        <td className='px-3 py-3 text-white uppercase sticky left-0 bg-blue-600 z-[5]'>TOTAL PATRIMONIO</td>
+                                    <tr className='group bg-blue-100 font-bold text-sm hover:bg-white'>
+                                        <td className='px-3 py-3 text-gray-900 uppercase sticky left-0 bg-blue-100 group-hover:bg-white z-[5]'>TOTAL PATRIMONIO</td>
                                         {availableMonths.map(month => (
                                             <React.Fragment key={`va-te-${month}`}>
-                                                <td className='px-3 py-3 text-right text-white border-l border-blue-500'>{formatCurrency(totalEquityByMonth[month])}</td>
-                                                <td className='px-3 py-3 text-right text-white'>100.0%</td>
+                                                <td className='px-3 py-3 text-right text-gray-900 border-l border-blue-200'>{formatCurrency(totalEquityByMonth[month])}</td>
+                                                <td className='px-3 py-3 text-right text-gray-900'>100.0%</td>
                                             </React.Fragment>
                                         ))}
+                                    </tr>
+                                    {/* Línea divisoria */}
+                                    <tr>
+                                        <td colSpan={availableMonths.length * 2 + 1} className='border-t-3 border-gray-900'></td>
                                     </tr>
                                 </tbody>
                             </table>
@@ -696,8 +726,8 @@ export default function BalanceGeneralPage() {
                 {/* Análisis Horizontal */}
                 {activeTab === 'horizontal' && (
                     <Card>
-                        
-                        <div 
+
+                        <div
                             className={`overflow-x-auto max-h-[calc(100vh-250px)] ${isDragging ? 'cursor-grabbing select-none' : 'cursor-grab'}`}
                             onMouseDown={handleMouseDown}
                             onMouseMove={handleMouseMove}
@@ -735,18 +765,22 @@ export default function BalanceGeneralPage() {
                                         </tr>
                                     </thead>
                                     <tbody className='bg-white divide-y divide-gray-200'>
-                                        {/* ACTIVOS */}
-                                        <tr className='bg-green-700'>
-                                            <td colSpan={(availableMonths.length - 1) * 4 + 1} className='px-3 py-2 text-sm font-bold text-white uppercase'>ACTIVO</td>
+                                        {/* Línea divisoria */}
+                                        <tr>
+                                            <td colSpan={availableMonths.length * 2 + 1} className='border-t-12 border-gray-900'></td>
                                         </tr>
-                                        <tr className='bg-green-100'>
-                                            <td colSpan={(availableMonths.length - 1) * 4 + 1} className='px-3 py-2 text-xs font-bold text-green-800 uppercase'>ACTIVO CORRIENTE</td>
+                                        {/* ACTIVOS */}
+                                        <tr className='bg-green-400'>
+                                            <td colSpan={(availableMonths.length - 1) * 4 + 1} className='px-3 py-2 text-sm font-bold text-gray-900 uppercase'>ACTIVO</td>
+                                        </tr>
+                                        <tr className='bg-green-300'>
+                                            <td colSpan={(availableMonths.length - 1) * 4 + 1} className='px-3 py-2 text-xs font-bold text-gray-900 uppercase'>ACTIVO CORRIENTE</td>
                                         </tr>
                                         {lastMonthData.currentAssets.map((account, idx) => {
                                             const accountData = accountsStructure.get(account.accountCode)
                                             return (
-                                                <tr key={`ha-ca-${idx}`} className='hover:bg-gray-50'>
-                                                    <td className='px-3 py-2 text-xs text-gray-900 sticky left-0 bg-white z-[5]'>{account.accountName}</td>
+                                                <tr key={`ha-ca-${idx}`} className='group bg-green-50 hover:bg-white'>
+                                                    <td className='px-3 py-2 text-xs text-black sticky left-0 bg-green-50 group-hover:bg-white z-[5]'>{account.accountName}</td>
                                                     {availableMonths.slice(1).map((month, mIdx) => {
                                                         const prevMonth = availableMonths[mIdx]
                                                         const currentValue = accountData?.monthlyAmounts[month] || 0
@@ -766,34 +800,38 @@ export default function BalanceGeneralPage() {
                                                 </tr>
                                             )
                                         })}
-                                        <tr className='bg-green-50 font-bold'>
-                                            <td className='px-3 py-2 text-xs text-green-800 sticky left-0 bg-green-50 z-[5]'>Total Activo Corriente</td>
+                                        <tr className='group bg-green-200 font-bold hover:bg-white'>
+                                            <td className='px-3 py-2 text-xs text-gray-900 sticky left-0 bg-green-200 group-hover:bg-white z-[5]'>Total Activo Corriente</td>
                                             {availableMonths.slice(1).map((month, mIdx) => {
                                                 const prevMonth = availableMonths[mIdx]
                                                 const currentValue = totalCurrentAssetsByMonth[month]
                                                 const previousValue = totalCurrentAssetsByMonth[prevMonth]
                                                 const varAbs = currentValue - previousValue
                                                 const varPct = previousValue !== 0 ? (varAbs / previousValue) * 100 : 0
-                                                const varColor = varAbs > 0 ? 'text-green-700' : varAbs < 0 ? 'text-red-700' : 'text-gray-700'
+                                                const varColor = varAbs > 0 ? 'text-gray-700' : varAbs < 0 ? 'text-red-700' : 'text-gray-700'
                                                 return (
                                                     <React.Fragment key={`ha-tca-${month}`}>
-                                                        <td className='px-3 py-2 text-xs text-right text-green-700 border-l border-gray-200'>{formatCurrency(previousValue)}</td>
-                                                        <td className='px-3 py-2 text-xs text-right text-green-800 font-medium'>{formatCurrency(currentValue)}</td>
-                                                        <td className={`px-3 py-2 text-xs text-right font-medium ${varColor}`}>{formatCurrency(varAbs)}</td>
-                                                        <td className={`px-3 py-2 text-xs text-right font-bold ${varColor}`}>{varPct.toFixed(1)}%</td>
+                                                        <td className='px-3 py-2 text-xs text-right text-gray-700 border-l border-gray-200'>{formatCurrency(previousValue)}</td>
+                                                        <td className='px-3 py-2 text-xs text-right text-gray-700 font-bold'>{formatCurrency(currentValue)}</td>
+                                                        <td className={`px-3 py-2 text-xs text-right text-gray-700 font-bold ${varColor}`}>{formatCurrency(varAbs)}</td>
+                                                        <td className={`px-3 py-2 text-xs text-right text-gray-700 font-bold ${varColor}`}>{varPct.toFixed(1)}%</td>
                                                     </React.Fragment>
                                                 )
                                             })}
                                         </tr>
+                                        {/* Línea divisoria */}
+                                        <tr>
+                                            <td colSpan={availableMonths.length * 2 + 1} className='border-t-2 border-gray-900'></td>
+                                        </tr>
 
-                                        <tr className='bg-green-100'>
-                                            <td colSpan={(availableMonths.length - 1) * 4 + 1} className='px-3 py-2 text-xs font-bold text-green-800 uppercase'>ACTIVO NO CORRIENTE</td>
+                                        <tr className='bg-green-300'>
+                                            <td colSpan={(availableMonths.length - 1) * 4 + 1} className='px-3 py-2 text-xs font-bold text-gray-900 uppercase'>ACTIVO NO CORRIENTE</td>
                                         </tr>
                                         {lastMonthData.nonCurrentAssets.map((account, idx) => {
                                             const accountData = accountsStructure.get(account.accountCode)
                                             return (
-                                                <tr key={`ha-nca-${idx}`} className='hover:bg-gray-50'>
-                                                    <td className='px-3 py-2 text-xs text-gray-900 sticky left-0 bg-white z-[5]'>{account.accountName}</td>
+                                                <tr key={`ha-nca-${idx}`} className='group bg-green-50 hover:bg-white'>
+                                                    <td className='px-3 py-2 text-xs text-black sticky left-0 bg-green-50 group-hover:bg-white z-[5]'>{account.accountName}</td>
                                                     {availableMonths.slice(1).map((month, mIdx) => {
                                                         const prevMonth = availableMonths[mIdx]
                                                         const currentValue = accountData?.monthlyAmounts[month] || 0
@@ -813,38 +851,42 @@ export default function BalanceGeneralPage() {
                                                 </tr>
                                             )
                                         })}
-                                        <tr className='bg-green-50 font-bold'>
-                                            <td className='px-3 py-2 text-xs text-green-800 sticky left-0 bg-green-50 z-[5]'>Total Activo No Corriente</td>
+                                        <tr className='group bg-green-200 font-bold hover:bg-white'>
+                                            <td className='px-3 py-2 text-xs text-gray-900 sticky left-0 bg-green-200 group-hover:bg-white z-[5]'>Total Activo No Corriente</td>
                                             {availableMonths.slice(1).map((month, mIdx) => {
                                                 const prevMonth = availableMonths[mIdx]
                                                 const currentValue = totalNonCurrentAssetsByMonth[month]
                                                 const previousValue = totalNonCurrentAssetsByMonth[prevMonth]
                                                 const varAbs = currentValue - previousValue
                                                 const varPct = previousValue !== 0 ? (varAbs / previousValue) * 100 : 0
-                                                const varColor = varAbs > 0 ? 'text-green-700' : varAbs < 0 ? 'text-red-700' : 'text-gray-700'
+                                                const varColor = varAbs > 0 ? 'text-gray-700' : varAbs < 0 ? 'text-red-700' : 'text-gray-700'
                                                 return (
                                                     <React.Fragment key={`ha-tnca-${month}`}>
-                                                        <td className='px-3 py-2 text-xs text-right text-green-700 border-l border-gray-200'>{formatCurrency(previousValue)}</td>
-                                                        <td className='px-3 py-2 text-xs text-right text-green-800 font-medium'>{formatCurrency(currentValue)}</td>
-                                                        <td className={`px-3 py-2 text-xs text-right font-medium ${varColor}`}>{formatCurrency(varAbs)}</td>
+                                                        <td className='px-3 py-2 text-xs text-right text-gray-700 border-l border-gray-200'>{formatCurrency(previousValue)}</td>
+                                                        <td className='px-3 py-2 text-xs text-right text-gray-700 font-bold'>{formatCurrency(currentValue)}</td>
+                                                        <td className={`px-3 py-2 text-xs text-right font-bold ${varColor}`}>{formatCurrency(varAbs)}</td>
                                                         <td className={`px-3 py-2 text-xs text-right font-bold ${varColor}`}>{varPct.toFixed(1)}%</td>
                                                     </React.Fragment>
                                                 )
                                             })}
                                         </tr>
-                                        <tr className='bg-green-700 font-bold text-sm'>
-                                            <td className='px-3 py-3 text-white uppercase sticky left-0 bg-green-700 z-[5]'>TOTAL ACTIVO</td>
+                                        {/* Línea divisoria */}
+                                        <tr>
+                                            <td colSpan={availableMonths.length * 2 + 1} className='border-t-2 border-gray-500'></td>
+                                        </tr>
+                                        <tr className='group bg-green-400 font-bold text-sm hover:bg-green-200'>
+                                            <td className='px-3 py-3 text-black uppercase sticky left-0 bg-green-400 group-hover:bg-green-200 z-[5]'>TOTAL ACTIVO</td>
                                             {availableMonths.slice(1).map((month, mIdx) => {
                                                 const prevMonth = availableMonths[mIdx]
                                                 const currentValue = totalAssetsByMonth[month]
                                                 const previousValue = totalAssetsByMonth[prevMonth]
                                                 const varAbs = currentValue - previousValue
                                                 const varPct = previousValue !== 0 ? (varAbs / previousValue) * 100 : 0
-                                                const varColor = varAbs > 0 ? 'text-green-200' : varAbs < 0 ? 'text-red-200' : 'text-white'
+                                                const varColor = varAbs > 0 ? 'text-gray-900' : varAbs < 0 ? 'text-red-600' : 'text-gray-900'
                                                 return (
                                                     <React.Fragment key={`ha-ta-${month}`}>
-                                                        <td className='px-3 py-3 text-right text-green-100 border-l border-green-600'>{formatCurrency(previousValue)}</td>
-                                                        <td className='px-3 py-3 text-right text-white font-bold'>{formatCurrency(currentValue)}</td>
+                                                        <td className='px-3 py-3 text-right text-gray-900 border-l border-green-300'>{formatCurrency(previousValue)}</td>
+                                                        <td className='px-3 py-3 text-right text-black font-bold'>{formatCurrency(currentValue)}</td>
                                                         <td className={`px-3 py-3 text-right font-bold ${varColor}`}>{formatCurrency(varAbs)}</td>
                                                         <td className={`px-3 py-3 text-right font-bold ${varColor}`}>{varPct.toFixed(1)}%</td>
                                                     </React.Fragment>
@@ -852,18 +894,23 @@ export default function BalanceGeneralPage() {
                                             })}
                                         </tr>
 
-                                        {/* PASIVOS */}
-                                        <tr className='bg-orange-600'>
-                                            <td colSpan={(availableMonths.length - 1) * 4 + 1} className='px-3 py-2 text-sm font-bold text-white uppercase'>PASIVO</td>
+                                        {/* Línea divisoria */}
+                                        <tr>
+                                            <td colSpan={(availableMonths.length - 1) * 4 + 1} className='border-t-4 border-black'></td>
                                         </tr>
-                                        <tr className='bg-orange-100'>
-                                            <td colSpan={(availableMonths.length - 1) * 4 + 1} className='px-3 py-2 text-xs font-bold text-orange-800 uppercase'>PASIVO CORRIENTE</td>
+
+                                        {/* PASIVOS */}
+                                        <tr className='bg-orange-400'>
+                                            <td colSpan={(availableMonths.length - 1) * 4 + 1} className='px-3 py-2 text-sm font-bold text-gray-900 uppercase'>PASIVO</td>
+                                        </tr>
+                                        <tr className='bg-orange-200'>
+                                            <td colSpan={(availableMonths.length - 1) * 4 + 1} className='px-3 py-2 text-xs font-bold text-gray-900 uppercase'>PASIVO CORRIENTE</td>
                                         </tr>
                                         {lastMonthData.currentLiabilities.map((account, idx) => {
                                             const accountData = accountsStructure.get(account.accountCode)
                                             return (
-                                                <tr key={`ha-cl-${idx}`} className='hover:bg-gray-50'>
-                                                    <td className='px-3 py-2 text-xs text-gray-900 sticky left-0 bg-white z-[5]'>{account.accountName}</td>
+                                                <tr key={`ha-cl-${idx}`} className='group bg-orange-50 hover:bg-white'>
+                                                    <td className='px-3 py-2 text-xs text-black sticky left-0 bg-orange-50 group-hover:bg-white z-[5]'>{account.accountName}</td>
                                                     {availableMonths.slice(1).map((month, mIdx) => {
                                                         const prevMonth = availableMonths[mIdx]
                                                         const currentValue = accountData?.monthlyAmounts[month] || 0
@@ -883,34 +930,38 @@ export default function BalanceGeneralPage() {
                                                 </tr>
                                             )
                                         })}
-                                        <tr className='bg-orange-50 font-bold'>
-                                            <td className='px-3 py-2 text-xs text-orange-800 sticky left-0 bg-orange-50 z-[5]'>Total Pasivo Corriente</td>
+                                        <tr className='group bg-orange-100 font-bold hover:bg-white'>
+                                            <td className='px-3 py-2 text-xs text-gray-900 sticky left-0 bg-orange-100 group-hover:bg-white z-[5]'>Total Pasivo Corriente</td>
                                             {availableMonths.slice(1).map((month, mIdx) => {
                                                 const prevMonth = availableMonths[mIdx]
                                                 const currentValue = totalCurrentLiabilitiesByMonth[month]
                                                 const previousValue = totalCurrentLiabilitiesByMonth[prevMonth]
                                                 const varAbs = currentValue - previousValue
                                                 const varPct = previousValue !== 0 ? (varAbs / previousValue) * 100 : 0
-                                                const varColor = varAbs > 0 ? 'text-red-700' : varAbs < 0 ? 'text-green-700' : 'text-gray-700'
+                                                const varColor = varAbs > 0 ? 'text-gray-700' : varAbs < 0 ? 'text-green-700' : 'text-gray-700'
                                                 return (
                                                     <React.Fragment key={`ha-tcl-${month}`}>
-                                                        <td className='px-3 py-2 text-xs text-right text-orange-700 border-l border-gray-200'>{formatCurrency(previousValue)}</td>
-                                                        <td className='px-3 py-2 text-xs text-right text-orange-800 font-medium'>{formatCurrency(currentValue)}</td>
+                                                        <td className='px-3 py-2 text-xs text-right text-gray-700 border-l border-gray-200'>{formatCurrency(previousValue)}</td>
+                                                        <td className='px-3 py-2 text-xs text-right text-gray-700 font-medium'>{formatCurrency(currentValue)}</td>
                                                         <td className={`px-3 py-2 text-xs text-right font-medium ${varColor}`}>{formatCurrency(varAbs)}</td>
                                                         <td className={`px-3 py-2 text-xs text-right font-bold ${varColor}`}>{varPct.toFixed(1)}%</td>
                                                     </React.Fragment>
                                                 )
                                             })}
                                         </tr>
+                                         {/* Línea divisoria */}
+                                        <tr>
+                                            <td colSpan={availableMonths.length * 2 + 1} className='border-t-2 border-gray-500'></td>
+                                        </tr>
 
-                                        <tr className='bg-orange-100'>
-                                            <td colSpan={(availableMonths.length - 1) * 4 + 1} className='px-3 py-2 text-xs font-bold text-orange-800 uppercase'>PASIVO NO CORRIENTE</td>
+                                        <tr className='bg-orange-200'>
+                                            <td colSpan={(availableMonths.length - 1) * 4 + 1} className='px-3 py-2 text-xs font-bold text-gray-900 uppercase'>PASIVO NO CORRIENTE</td>
                                         </tr>
                                         {lastMonthData.nonCurrentLiabilities.map((account, idx) => {
                                             const accountData = accountsStructure.get(account.accountCode)
                                             return (
-                                                <tr key={`ha-ncl-${idx}`} className='hover:bg-gray-50'>
-                                                    <td className='px-3 py-2 text-xs text-gray-900 sticky left-0 bg-white z-[5]'>{account.accountName}</td>
+                                                <tr key={`ha-ncl-${idx}`} className='group bg-orange-50 hover:bg-white'>
+                                                    <td className='px-3 py-2 text-xs text-black sticky left-0 bg-orange-50 group-hover:bg-white z-[5]'>{account.accountName}</td>
                                                     {availableMonths.slice(1).map((month, mIdx) => {
                                                         const prevMonth = availableMonths[mIdx]
                                                         const currentValue = accountData?.monthlyAmounts[month] || 0
@@ -930,38 +981,42 @@ export default function BalanceGeneralPage() {
                                                 </tr>
                                             )
                                         })}
-                                        <tr className='bg-orange-50 font-bold'>
-                                            <td className='px-3 py-2 text-xs text-orange-800 sticky left-0 bg-orange-50 z-[5]'>Total Pasivo No Corriente</td>
+                                        <tr className='group bg-orange-100 font-bold hover:bg-white'>
+                                            <td className='px-3 py-2 text-xs text-gray-900 sticky left-0 bg-orange-100 group-hover:bg-white z-[5]'>Total Pasivo No Corriente</td>
                                             {availableMonths.slice(1).map((month, mIdx) => {
                                                 const prevMonth = availableMonths[mIdx]
                                                 const currentValue = totalNonCurrentLiabilitiesByMonth[month]
                                                 const previousValue = totalNonCurrentLiabilitiesByMonth[prevMonth]
                                                 const varAbs = currentValue - previousValue
                                                 const varPct = previousValue !== 0 ? (varAbs / previousValue) * 100 : 0
-                                                const varColor = varAbs > 0 ? 'text-red-700' : varAbs < 0 ? 'text-green-700' : 'text-gray-700'
+                                                const varColor = varAbs > 0 ? 'text-gray-700' : varAbs < 0 ? 'text-green-700' : 'text-gray-700'
                                                 return (
                                                     <React.Fragment key={`ha-tncl-${month}`}>
-                                                        <td className='px-3 py-2 text-xs text-right text-orange-700 border-l border-gray-200'>{formatCurrency(previousValue)}</td>
-                                                        <td className='px-3 py-2 text-xs text-right text-orange-800 font-medium'>{formatCurrency(currentValue)}</td>
+                                                        <td className='px-3 py-2 text-xs text-right text-gray-700 border-l border-gray-200'>{formatCurrency(previousValue)}</td>
+                                                        <td className='px-3 py-2 text-xs text-right text-gray-800 font-medium'>{formatCurrency(currentValue)}</td>
                                                         <td className={`px-3 py-2 text-xs text-right font-medium ${varColor}`}>{formatCurrency(varAbs)}</td>
                                                         <td className={`px-3 py-2 text-xs text-right font-bold ${varColor}`}>{varPct.toFixed(1)}%</td>
                                                     </React.Fragment>
                                                 )
                                             })}
                                         </tr>
-                                        <tr className='bg-orange-600 font-bold text-sm'>
-                                            <td className='px-3 py-3 text-white uppercase sticky left-0 bg-orange-600 z-[5]'>TOTAL PASIVO</td>
+                                         {/* Línea divisoria */}
+                                        <tr>
+                                            <td colSpan={availableMonths.length * 2 + 1} className='border-t-2 border-gray-500'></td>
+                                        </tr>
+                                        <tr className='group bg-orange-400 font-bold text-sm hover:bg-orange-200'>
+                                            <td className='px-3 py-3 text-black uppercase sticky left-0 bg-orange-400 group-hover:bg-orange-200 z-[5]'>TOTAL PASIVO</td>
                                             {availableMonths.slice(1).map((month, mIdx) => {
                                                 const prevMonth = availableMonths[mIdx]
                                                 const currentValue = totalLiabilitiesByMonth[month]
                                                 const previousValue = totalLiabilitiesByMonth[prevMonth]
                                                 const varAbs = currentValue - previousValue
                                                 const varPct = previousValue !== 0 ? (varAbs / previousValue) * 100 : 0
-                                                const varColor = varAbs > 0 ? 'text-red-200' : varAbs < 0 ? 'text-green-200' : 'text-white'
+                                                const varColor = varAbs > 0 ? 'text-gray-900' : varAbs < 0 ? 'text-green-600' : 'text-gray-900'
                                                 return (
                                                     <React.Fragment key={`ha-tl-${month}`}>
-                                                        <td className='px-3 py-3 text-right text-orange-100 border-l border-orange-500'>{formatCurrency(previousValue)}</td>
-                                                        <td className='px-3 py-3 text-right text-white font-bold'>{formatCurrency(currentValue)}</td>
+                                                        <td className='px-3 py-3 text-right text-gray-900 border-l border-orange-300'>{formatCurrency(previousValue)}</td>
+                                                        <td className='px-3 py-3 text-right text-black font-bold'>{formatCurrency(currentValue)}</td>
                                                         <td className={`px-3 py-3 text-right font-bold ${varColor}`}>{formatCurrency(varAbs)}</td>
                                                         <td className={`px-3 py-3 text-right font-bold ${varColor}`}>{varPct.toFixed(1)}%</td>
                                                     </React.Fragment>
@@ -969,27 +1024,32 @@ export default function BalanceGeneralPage() {
                                             })}
                                         </tr>
 
+                                        {/* Línea divisoria */}
+                                        <tr>
+                                            <td colSpan={(availableMonths.length - 1) * 4 + 1} className='border-t-4 border-black'></td>
+                                        </tr>
+
                                         {/* PATRIMONIO */}
-                                        <tr className='bg-blue-700'>
-                                            <td colSpan={(availableMonths.length - 1) * 4 + 1} className='px-3 py-2 text-sm font-bold text-white uppercase'>PATRIMONIO</td>
+                                        <tr className='bg-blue-400'>
+                                            <td colSpan={(availableMonths.length - 1) * 4 + 1} className='px-3 py-2 text-sm font-bold text-gray-900 uppercase'>PATRIMONIO</td>
                                         </tr>
                                         {lastMonthData.equity.map((account, idx) => {
                                             const accountData = accountsStructure.get(account.accountCode)
                                             return (
-                                                <tr key={`ha-eq-${idx}`} className='hover:bg-gray-50'>
-                                                    <td className='px-3 py-2 text-xs text-gray-900 sticky left-0 bg-white z-[5]'>{account.accountName}</td>
+                                                <tr key={`ha-eq-${idx}`} className='group bg-blue-300 hover:bg-white'>
+                                                    <td className='px-3 py-2 text-xs text-black sticky left-0 bg-blue-300 group-hover:bg-white z-[5]'>{account.accountName}</td>
                                                     {availableMonths.slice(1).map((month, mIdx) => {
                                                         const prevMonth = availableMonths[mIdx]
                                                         const currentValue = accountData?.monthlyAmounts[month] || 0
                                                         const previousValue = accountData?.monthlyAmounts[prevMonth] || 0
                                                         const varAbs = currentValue - previousValue
                                                         const varPct = previousValue !== 0 ? (varAbs / previousValue) * 100 : 0
-                                                        const varColor = varAbs > 0 ? 'text-green-600' : varAbs < 0 ? 'text-red-600' : 'text-gray-600'
+                                                        const varColor = varAbs > 0 ? 'text-gray-900' : varAbs < 0 ? 'text-red-600' : 'text-gray-900'
                                                         return (
                                                             <React.Fragment key={`ha-eq-${idx}-${month}`}>
-                                                                <td className='px-3 py-2 text-xs text-right text-gray-700 border-l border-gray-200'>{formatCurrency(previousValue)}</td>
-                                                                <td className='px-3 py-2 text-xs text-right text-gray-900 font-medium'>{formatCurrency(currentValue)}</td>
-                                                                <td className={`px-3 py-2 text-xs text-right font-medium ${varColor}`}>{formatCurrency(varAbs)}</td>
+                                                                <td className='px-3 py-2 text-xs text-right text-gray-900 border-l border-gray-200'>{formatCurrency(previousValue)}</td>
+                                                                <td className='px-3 py-2 text-xs text-right text-gray-900 font-bold'>{formatCurrency(currentValue)}</td>
+                                                                <td className={`px-3 py-2 text-xs text-right font-bold ${varColor}`}>{formatCurrency(varAbs)}</td>
                                                                 <td className={`px-3 py-2 text-xs text-right font-bold ${varColor}`}>{varPct.toFixed(1)}%</td>
                                                             </React.Fragment>
                                                         )
@@ -997,24 +1057,28 @@ export default function BalanceGeneralPage() {
                                                 </tr>
                                             )
                                         })}
-                                        <tr className='bg-blue-600 font-bold text-sm'>
-                                            <td className='px-3 py-3 text-white uppercase sticky left-0 bg-blue-600 z-[5]'>TOTAL PATRIMONIO</td>
+                                        <tr className='group bg-blue-200 font-bold text-sm hover:bg-white'>
+                                            <td className='px-3 py-3 text-gray-900 uppercase sticky left-0 bg-blue-200 group-hover:bg-white z-[5]'>TOTAL PATRIMONIO</td>
                                             {availableMonths.slice(1).map((month, mIdx) => {
                                                 const prevMonth = availableMonths[mIdx]
                                                 const currentValue = totalEquityByMonth[month]
                                                 const previousValue = totalEquityByMonth[prevMonth]
                                                 const varAbs = currentValue - previousValue
                                                 const varPct = previousValue !== 0 ? (varAbs / previousValue) * 100 : 0
-                                                const varColor = varAbs > 0 ? 'text-green-200' : varAbs < 0 ? 'text-red-200' : 'text-white'
+                                                const varColor = varAbs > 0 ? 'text-gray-900' : varAbs < 0 ? 'text-red-600' : 'text-gray-900'
                                                 return (
                                                     <React.Fragment key={`ha-te-${month}`}>
-                                                        <td className='px-3 py-3 text-right text-blue-100 border-l border-blue-500'>{formatCurrency(previousValue)}</td>
-                                                        <td className='px-3 py-3 text-right text-white font-bold'>{formatCurrency(currentValue)}</td>
+                                                        <td className='px-3 py-3 text-right text-gray-900 border-l border-blue-500'>{formatCurrency(previousValue)}</td>
+                                                        <td className='px-3 py-3 text-right text-gray-900 font-bold'>{formatCurrency(currentValue)}</td>
                                                         <td className={`px-3 py-3 text-right font-bold ${varColor}`}>{formatCurrency(varAbs)}</td>
                                                         <td className={`px-3 py-3 text-right font-bold ${varColor}`}>{varPct.toFixed(1)}%</td>
                                                     </React.Fragment>
                                                 )
                                             })}
+                                        </tr>
+                                         {/* Línea divisoria */}
+                                        <tr>
+                                            <td colSpan={(availableMonths.length - 1) * 4 + 1} className='border-t-4 border-black'></td>
                                         </tr>
                                     </tbody>
                                 </table>
