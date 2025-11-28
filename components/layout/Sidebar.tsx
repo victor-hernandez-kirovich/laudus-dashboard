@@ -26,37 +26,14 @@ const navigation = [
   { name: 'Facturas Mensuales', href: '/dashboard/invoices', icon: Receipt },
   { name: 'Facturas por Sucursal', href: '/dashboard/invoices/branch', icon: Building2 },
   { name: 'Facturas por Vendedor', href: '/dashboard/invoices/salesman', icon: Users },
-  {
-    name: 'Indicadores Financieros',
-    href: '/dashboard/indicadores-financieros',
-    icon: TrendingUp,
-    children: [
-      { name: 'Ratio de Liquidez', href: '/dashboard/indicadores-financieros/ratio-circulante' },
-      { name: 'Capital de Trabajo', href: '/dashboard/indicadores-financieros/capital-trabajo' },
-      { name: 'Estructura Financiera', href: '/dashboard/indicadores-financieros/estructura-financiera' },
-      { name: 'Días de Cobro y Pago', href: '/dashboard/indicadores-financieros/dias-cobro-pago' },
-      { name: 'Margen de Rentabilidad', href: '/dashboard/indicadores-financieros/margen-rentabilidad' },
-      { name: 'EBITDA', href: '/dashboard/indicadores-financieros/ebitda' },
-      { name: 'ROA - Return on Assets', href: '/dashboard/indicadores-financieros/roa' },
-      { name: 'ROI - Return on Investment', href: '/dashboard/indicadores-financieros/roi' },
-    ]
-  },
   { name: 'Cargar Datos', href: '/dashboard/admin/load-data', icon: Database },
 ];
 
 export function Sidebar() {
   const pathname = usePathname();
   const [isOpen, setIsOpen] = useState(false);
-  const [manuallyExpanded, setManuallyExpanded] = useState(false);
 
   const closeSidebar = () => setIsOpen(false);
-
-  // Reset manual expansion when navigating away from Indicadores Financieros
-  useEffect(() => {
-    if (!pathname?.startsWith('/dashboard/indicadores-financieros')) {
-      setManuallyExpanded(false);
-    }
-  }, [pathname]);
 
   return (
     <>
@@ -97,51 +74,6 @@ export function Sidebar() {
           {navigation.map((item) => {
             const isActive = pathname === item.href;
             const Icon = item.icon;
-
-            // If item has children render expandable section
-            if (item.children && item.children.length > 0) {
-              const parentActive = pathname?.startsWith(item.href) ?? false;
-              const isExpanded = parentActive || manuallyExpanded;
-              
-              return (
-                <div key={item.name}>
-                  <button
-                    onClick={() => setManuallyExpanded(prev => !prev)}
-                    className={cn(
-                      'w-full flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium transition-colors',
-                      parentActive || isExpanded
-                        ? 'bg-gray-800 text-white'
-                        : 'text-gray-400 hover:bg-gray-800 hover:text-white'
-                    )}
-                  >
-                    <Icon className="h-5 w-5 flex-shrink-0" />
-                    <span className="truncate">{item.name}</span>
-                    <span className="ml-auto text-xs opacity-80">{isExpanded ? '▾' : '▸'}</span>
-                  </button>
-
-                  {isExpanded && (
-                    <div className="mt-1 ml-8 space-y-1">
-                      {item.children.map((child: any) => {
-                        const childActive = pathname === child.href;
-                        return (
-                          <Link
-                            key={child.name}
-                            href={child.href}
-                            onClick={closeSidebar}
-                            className={cn(
-                              'block rounded-md px-3 py-2 text-sm transition-colors',
-                              childActive ? 'bg-gray-800 text-white' : 'text-gray-400 hover:bg-gray-800 hover:text-white'
-                            )}
-                          >
-                            {child.name}
-                          </Link>
-                        );
-                      })}
-                    </div>
-                  )}
-                </div>
-              );
-            }
 
             return (
               <Link
