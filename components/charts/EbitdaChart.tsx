@@ -36,13 +36,13 @@ export function EbitdaChart({ data, onHover }: EbitdaChartProps) {
 
   const formatSpanishDate = (dateString: string): string => {
     const parts = dateString.split('-')
-    const year = parseInt(parts[0])
+    
     const month = parseInt(parts[1])
     const months = [
-      'Ene', 'Feb', 'Mar', 'Abr', 'May', 'Jun',
-      'Jul', 'Ago', 'Sep', 'Oct', 'Nov', 'Dic'
+      'Enero', 'Febrero', 'Marzo', 'Abril', 'Mayo', 'Junio',
+      'Julio', 'Agosto', 'Septiembre', 'Octubre', 'Noviembre', 'Diciembre'
     ]
-    return `${months[month - 1]} ${year}`
+    return `${months[month - 1]}`
   }
 
   // Preparar datos para el gráfico (invertir orden para mostrar cronológicamente)

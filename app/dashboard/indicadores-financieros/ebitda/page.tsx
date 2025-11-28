@@ -324,7 +324,7 @@ export default function EbitdaPage() {
               </svg>
               {/* Texto central */}
               <div className='absolute inset-0 flex flex-col items-center justify-center'>
-                <div className='text-4xl font-bold transition-colors duration-300' style={{ color: ebitdaColor }}>
+                <div className='text-3xl font-bold transition-colors duration-300' style={{ color: ebitdaColor }}>
                   {displayData.margenEbitda.toFixed(1)}%
                 </div>
                 <div className='text-xs font-semibold mt-1 text-gray-600'>
