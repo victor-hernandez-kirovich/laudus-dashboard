@@ -7,6 +7,7 @@ import { formatCurrency } from "@/lib/utils";
 import { InvoicesBySalesmanData } from "@/lib/types";
 import { ChevronDown, ChevronUp } from "lucide-react";
 import { TopVendedoresChart } from "@/components/charts/TopVendedoresChart";
+import { SalesmanMonthlyPerformanceChart } from "@/components/charts/SalesmanMonthlyPerformanceChart";
 
 export default function InvoicesBySalesmanPage() {
   const [salesmen, setSalesmen] = useState<InvoicesBySalesmanData[]>([]);
@@ -15,6 +16,7 @@ export default function InvoicesBySalesmanPage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [expandedRow, setExpandedRow] = useState<string | null>(null);
+  const [selectedSalesmanId, setSelectedSalesmanId] = useState<number>(0);
 
   // Compute available years from salesmen
   const availableYears = Array.from(
@@ -152,6 +154,37 @@ export default function InvoicesBySalesmanPage() {
       }))
       .sort((a, b) => b.net - a.net);
   };
+
+  // Get unique salesmen from selected month data
+  const uniqueSalesmen = selectedMonthData
+    .map((s) => ({
+      id: s.salesmanId,
+      name: s.salesmanName,
+    }))
+    .sort((a, b) => a.name.localeCompare(b.name));
+
+  // Prepare data for Monthly Performance Chart
+  const prepareMonthlyPerformanceData = () => {
+    if (!selectedSalesmanId) return [];
+
+    return salesmen
+      .filter(
+        (s) => s.year === selectedYear && s.salesmanId === selectedSalesmanId
+      )
+      .map((s) => ({
+        monthName: s.monthName,
+        monthNumber: s.monthNumber,
+        net: s.net,
+        margin: s.margin,
+        marginPercentage: s.marginPercentage,
+        numberOfDocuments: s.numberOfDocuments,
+        averageTicket: s.averageTicket,
+      }));
+  };
+
+  const selectedSalesmanName =
+    selectedMonthData.find((s) => s.salesmanId === selectedSalesmanId)
+      ?.salesmanName || "";
 
   return (
     <div>
@@ -417,14 +450,17 @@ export default function InvoicesBySalesmanPage() {
         {/* Gráfica: Top Vendedores */}
         {selectedMonthData.length > 0 && (
           <Card>
+             
             <div className="p-6">
+              <div className="w-full md:w-1/2">
               <div className="mb-4">
                 <h3 className="text-lg font-bold text-gray-900">
-                  🏆 Top 10 Vendedores del Mes
+                  Ranking de vendedores por volumen de ventas netas
                 </h3>
-                <p className="text-sm text-gray-600">
-                  Ranking de vendedores por volumen de ventas netas - {monthName} {selectedYear}
-                </p>
+                <h4 className="text-m font-bold text-gray-900">
+                  {monthName} {selectedYear}
+                </h4>
+                
                 <div className="mt-3 p-3 bg-purple-50 rounded-lg border border-purple-200">
                   <p className="text-xs font-semibold text-purple-900 mb-1">
                     💡 Cálculo:
@@ -437,7 +473,97 @@ export default function InvoicesBySalesmanPage() {
                   </p>
                 </div>
               </div>
+              </div>
               <TopVendedoresChart data={prepareTopVendedoresData()} topN={10} />
+            </div>
+          </Card>
+        )}
+
+        {/* Gráfica: Desempeño Mensual por Vendedor */}
+        {selectedMonthData.length > 0 && (
+          <Card>
+            <div className="p-6">
+              <div className="mb-4">
+                <h3 className="text-lg font-bold text-gray-900">
+                  📊 Desempeño Mensual por Vendedor
+                </h3>
+                <p className="text-sm text-gray-600 mb-3">
+                  Ventas netas mensuales del vendedor seleccionado
+                </p>
+
+                {/* Selectores de Año y Vendedor */}
+                <div className="w-full md:w-1/2">
+                  <div className="bg-gray-50 border rounded-lg p-4">
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                      <div>
+                        <label className="block text-sm font-medium text-gray-700 mb-2">
+                          Año:
+                        </label>
+                        <select
+                          value={selectedYear}
+                          onChange={(e) => setSelectedYear(Number(e.target.value))}
+                          className="w-full px-4 py-2 border-2 border-gray-400 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500 bg-white font-medium text-gray-900"
+                        >
+                          {availableYears.map((year) => (
+                            <option key={year} value={year}>
+                              {year}
+                            </option>
+                          ))}
+                        </select>
+                      </div>
+
+                      <div>
+                        <label className="block text-sm font-medium text-gray-700 mb-2">
+                          Vendedor:
+                        </label>
+                        <select
+                          value={selectedSalesmanId}
+                          onChange={(e) => setSelectedSalesmanId(Number(e.target.value))}
+                          className="w-full px-4 py-2 border-2 border-gray-400 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500 bg-white font-medium text-gray-900"
+                        >
+                          <option value={0}>-- Seleccione un vendedor --</option>
+                          {uniqueSalesmen.map((salesman) => (
+                            <option key={salesman.id} value={salesman.id}>
+                              {salesman.name}
+                            </option>
+                          ))}
+                        </select>
+                      </div>
+                    </div>
+                  </div>
+
+                  {selectedSalesmanId > 0 && (
+                    <div className="mt-3 p-3 bg-purple-50 rounded-lg border border-purple-200">
+                      <p className="text-xs font-semibold text-purple-900 mb-1">
+                        💡 Análisis:
+                      </p>
+                      <p className="text-xs text-purple-800">
+                        Este gráfico muestra el desempeño mensual de <strong>{selectedSalesmanName}</strong> durante el año {selectedYear}
+                      </p>
+                      <p className="text-xs text-purple-700 mt-1">
+                        Identifica tendencias, picos de ventas y oportunidades de mejora mes a mes.
+                      </p>
+                    </div>
+                  )}
+                </div>
+              </div>
+
+              {selectedSalesmanId > 0 ? (
+                prepareMonthlyPerformanceData().length > 0 ? (
+                  <SalesmanMonthlyPerformanceChart
+                    data={prepareMonthlyPerformanceData()}
+                    salesmanName={selectedSalesmanName}
+                  />
+                ) : (
+                  <div className="text-center py-12 text-gray-500">
+                    No hay datos disponibles para este vendedor en {selectedYear}
+                  </div>
+                )
+              ) : (
+                <div className="text-center py-12 text-gray-500">
+                  Seleccione un vendedor para ver su desempeño mensual
+                </div>
+              )}
             </div>
           </Card>
         )}

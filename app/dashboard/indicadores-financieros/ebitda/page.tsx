@@ -32,6 +32,7 @@ interface EbitdaData {
 
 export default function EbitdaPage() {
   const [allData, setAllData] = useState<BalanceData[]>([])
+  const [selectedYear, setSelectedYear] = useState<number>(0)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
   const [hoveredData, setHoveredData] = useState<EbitdaData | null>(null)
@@ -50,6 +51,12 @@ export default function EbitdaPage() {
             return new Date(b.date).getTime() - new Date(a.date).getTime()
           })
           setAllData(sortedData)
+          
+          // Seleccionar el año más reciente por defecto
+          if (sortedData.length > 0) {
+            const mostRecentYear = new Date(sortedData[0].date).getFullYear()
+            setSelectedYear(mostRecentYear)
+          }
         }
       } catch (err) {
         setError(err instanceof Error ? err.message : 'Error desconocido')
@@ -60,6 +67,17 @@ export default function EbitdaPage() {
 
     fetchData()
   }, [])
+  
+  // Obtener años disponibles
+  const availableYears = Array.from(
+    new Set(allData.map(d => new Date(d.date).getFullYear()))
+  ).sort((a, b) => b - a)
+  
+  // Filtrar datos por año seleccionado
+  const filteredData = allData.filter(d => {
+    const year = new Date(d.date).getFullYear()
+    return year === selectedYear
+  })
 
   const formatSpanishDate = (dateString: string): string => {
     const [year, month] = dateString.split('-').map(Number)
@@ -72,7 +90,7 @@ export default function EbitdaPage() {
 
   // Calcular EBITDA para cada fecha
   const calculateEbitda = (): EbitdaData[] => {
-    return allData.map(record => {
+    return filteredData.map(record => {
       const records = record.data || []
       
       // Buscar cuentas necesarias
@@ -184,6 +202,40 @@ export default function EbitdaPage() {
   }
 
   const ebitdaData = calculateEbitda()
+  
+  if (!ebitdaData || ebitdaData.length === 0) {
+    return (
+      <div>
+        <Header title='EBITDA' subtitle='No hay datos disponibles para el año seleccionado' />
+        <div className='p-4 sm:p-6 lg:p-8'>
+          <div className="flex justify-end mb-6">
+            <div className="bg-gray-50 border rounded-lg p-3">
+              <div className="flex items-center gap-2">
+                <label className="text-sm font-medium text-gray-700">
+                  Año:
+                </label>
+                <select
+                  value={selectedYear}
+                  onChange={(e) => setSelectedYear(Number(e.target.value))}
+                  className="px-4 py-2 border-2 border-gray-400 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white font-medium text-gray-900"
+                >
+                  {availableYears.map((year) => (
+                    <option key={year} value={year}>
+                      {year}
+                    </option>
+                  ))}
+                </select>
+              </div>
+            </div>
+          </div>
+          <div className='text-center py-12 text-gray-500'>
+            No se encontraron datos para el año {selectedYear}
+          </div>
+        </div>
+      </div>
+    )
+  }
+  
   const latestEbitda = ebitdaData[0]
   
   // Usar hoveredData si existe, sino usar latestEbitda
@@ -217,6 +269,29 @@ export default function EbitdaPage() {
       />
 
       <div className='p-4 sm:p-6 lg:p-8 space-y-6 sm:space-y-8'>
+        {/* Selector de Año */}
+        <div className="flex justify-end">
+          <div className="bg-gray-50 border rounded-lg p-3">
+            <div className="flex items-center gap-2">
+              <label className="text-sm font-medium text-gray-700">
+                Año:
+              </label>
+              <select
+                value={selectedYear}
+                onChange={(e) => setSelectedYear(Number(e.target.value))}
+                className="px-4 py-2 border-2 border-gray-400 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white font-medium text-gray-900"
+              >
+                {availableYears.map((year) => (
+                  <option key={year} value={year}>
+                    {year}
+                  </option>
+                ))}
+              </select>
+            </div>
+          </div>
+        </div>
+        
+        {/* Grid con Gauge y Gráfico */}
         {/* Grid con Gauge y Gráfico */}
         <div className='grid grid-cols-1 lg:grid-cols-[400px_1fr] gap-6'>
           {/* Gauge EBITDA */}

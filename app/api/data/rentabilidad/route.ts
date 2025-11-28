@@ -21,7 +21,7 @@ export async function GET(request: Request) {
         }
 
         // Procesar cada documento para calcular ROA y ROI
-        const rentabilidadData = allDocuments.map(doc => {
+        const rentabilidadData = allDocuments.map((doc, index) => {
             const records = doc.data || [];
 
             // Buscar la fila "Sumas" que contiene los totales
@@ -47,14 +47,32 @@ export async function GET(request: Request) {
             // Calcular Utilidad Neta = Ingresos - Gastos
             const utilidadNeta = ingresos - gastos;
 
-            // Calcular Patrimonio = Activo Total - Pasivo Total
-            const patrimonio = activoTotal - pasivoTotal;
+            // Calcular Patrimonio Actual = Activo Total - Pasivo Total
+            const patrimonioActual = activoTotal - pasivoTotal;
+
+            // Calcular Patrimonio Promedio para ROE (más preciso)
+            // Usar patrimonio del mes anterior si existe
+            let patrimonioPromedio = patrimonioActual;
+            if (index < allDocuments.length - 1) {
+                const docAnterior = allDocuments[index + 1];
+                const recordsAnterior = docAnterior.data || [];
+                const filaSumasAnterior = recordsAnterior.find((r: any) => r.accountName === "Sumas");
+                
+                if (filaSumasAnterior) {
+                    const activoAnterior = parseFloat(filaSumasAnterior.assets || 0);
+                    const pasivoAnterior = parseFloat(filaSumasAnterior.liabilities || 0);
+                    const patrimonioAnterior = activoAnterior - pasivoAnterior;
+                    
+                    // Patrimonio Promedio = (Patrimonio Inicial + Patrimonio Final) / 2
+                    patrimonioPromedio = (patrimonioAnterior + patrimonioActual) / 2;
+                }
+            }
 
             // Calcular ROA = (Utilidad Neta / Activo Total) * 100
             const roa = activoTotal > 0 ? (utilidadNeta / activoTotal) * 100 : 0;
 
-            // Calcular ROI (ROE) = (Utilidad Neta / Patrimonio) * 100
-            const roi = patrimonio > 0 ? (utilidadNeta / patrimonio) * 100 : 0;
+            // Calcular ROI (ROE) = (Utilidad Neta / Patrimonio Promedio) * 100
+            const roi = patrimonioPromedio > 0 ? (utilidadNeta / patrimonioPromedio) * 100 : 0;
 
             return {
                 date: doc.date,
@@ -62,7 +80,7 @@ export async function GET(request: Request) {
                 roi: roi,
                 utilidadNeta: utilidadNeta,
                 activoTotal: activoTotal,
-                patrimonio: patrimonio,
+                patrimonio: patrimonioActual,
                 ingresos: ingresos,
                 gastos: gastos,
                 pasivoTotal: pasivoTotal

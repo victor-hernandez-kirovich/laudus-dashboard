@@ -440,11 +440,11 @@ export default function BalanceGeneralPage() {
 
                                     {/* Total Pasivo + Patrimonio */}
                                     {renderTotalRow('TOTAL PASIVO + PATRIMONIO', totalLiabilitiesAndEquityByMonth, 'bg-blue-400', 'text-black')}
+                                    {/* Línea divisoria */}
+                                    <tr>
+                                        <td colSpan={availableMonths.length * 2 + 1} className='border-t-3 border-gray-900'></td>
+                                    </tr>
                                 </tbody>
-                                {/* Línea divisoria */}
-                                <tr>
-                                    <td colSpan={availableMonths.length * 2 + 1} className='border-t-3 border-gray-900'></td>
-                                </tr>
                             </table>
                         </div>
                     </Card>

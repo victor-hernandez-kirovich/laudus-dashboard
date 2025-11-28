@@ -1,5 +1,6 @@
 'use client'
 
+import { useEffect } from 'react'
 import { Line, LineChart, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, ReferenceLine } from 'recharts'
 import { Card } from '@/components/ui/Card'
 
@@ -20,8 +21,8 @@ interface RoaChartProps {
 export function RoaChart({ data, onHover }: RoaChartProps) {
   const formatSpanishDate = (dateString: string): string => {
     const [year, month] = dateString.split('-').map(Number)
-    const months = ['Ene', 'Feb', 'Mar', 'Abr', 'May', 'Jun', 'Jul', 'Ago', 'Sep', 'Oct', 'Nov', 'Dic']
-    return `${months[month - 1]} ${year}`
+    const months = ['Enero', 'Febrero', 'Marzo', 'Abril', 'Mayo', 'Junio', 'Julio', 'Agosto', 'Septiembre', 'Octubre', 'Noviembre', 'Diciembre']
+    return `${months[month - 1]} `
   }
 
   const formatCurrency = (value: number): string => {
@@ -40,6 +41,15 @@ export function RoaChart({ data, onHover }: RoaChartProps) {
   }))
 
   const CustomTooltip = ({ active, payload }: any) => {
+    useEffect(() => {
+      if (active && payload && payload.length > 0) {
+        const dataPoint = data.find(d => d.date === payload[0].payload.date)
+        if (dataPoint && onHover) {
+          onHover(dataPoint)
+        }
+      }
+    }, [active, payload])
+
     if (active && payload && payload.length) {
       const data = payload[0].payload
       return (
@@ -67,19 +77,11 @@ export function RoaChart({ data, onHover }: RoaChartProps) {
 
   return (
     <Card title='Evolución del ROA'>
-      <div className='h-80'>
+      <div className='h-96'>
         <ResponsiveContainer width='100%' height='100%'>
           <LineChart
             data={chartData}
             margin={{ top: 5, right: 30, left: 20, bottom: 5 }}
-            onMouseMove={(e: any) => {
-              if (e && e.activePayload && e.activePayload.length > 0) {
-                const hoveredData = data.find(d => d.date === e.activePayload[0].payload.date)
-                if (hoveredData && onHover) {
-                  onHover(hoveredData)
-                }
-              }
-            }}
             onMouseLeave={() => {
               if (onHover) {
                 onHover(null)
@@ -97,11 +99,10 @@ export function RoaChart({ data, onHover }: RoaChartProps) {
             <YAxis
               tick={{ fontSize: 12 }}
               label={{ value: 'ROA (%)', angle: -90, position: 'insideLeft' }}
+              domain={[0, 'auto']}
+              ticks={[0, 10, 20, 30, 40, 50, 60, 70, 80, 90, 100]}
             />
             <Tooltip content={<CustomTooltip />} />
-            <ReferenceLine y={5} stroke='#10b981' strokeDasharray='3 3' label='Excelente (5%)' />
-            <ReferenceLine y={3} stroke='#3b82f6' strokeDasharray='3 3' label='Bueno (3%)' />
-            <ReferenceLine y={1} stroke='#f59e0b' strokeDasharray='3 3' label='Regular (1%)' />
             <Line
               type='monotone'
               dataKey='roa'

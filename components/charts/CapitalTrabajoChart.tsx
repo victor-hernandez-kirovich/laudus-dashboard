@@ -32,7 +32,7 @@ export function WorkingCapitalChart({ data }: WorkingCapitalChartProps) {
       'Enero', 'Febrero', 'Marzo', 'Abril', 'Mayo', 'Junio',
       'Julio', 'Agosto', 'Septiembre', 'Octubre', 'Noviembre', 'Diciembre'
     ]
-    return `${months[month - 1]} ${year}`
+    return `${months[month - 1]} `
   }
 
   // Preparar datos para el gráfico

@@ -21,6 +21,7 @@ export default function RoaPage() {
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
   const [hoveredData, setHoveredData] = useState<RoaData | null>(null)
+  const [selectedYear, setSelectedYear] = useState<number>(0)
 
   useEffect(() => {
     const fetchData = async () => {
@@ -31,7 +32,16 @@ export default function RoaPage() {
         const result = await response.json()
         
         if (result.success && result.data) {
-          setAllData(result.data)
+          const sortedData = result.data.sort((a: RoaData, b: RoaData) => 
+            b.date.localeCompare(a.date)
+          )
+          setAllData(sortedData)
+          
+          // Establecer el año más reciente como seleccionado
+          if (sortedData.length > 0) {
+            const mostRecentYear = new Date(sortedData[0].date).getFullYear()
+            setSelectedYear(mostRecentYear)
+          }
         }
       } catch (err) {
         setError(err instanceof Error ? err.message : 'Error desconocido')
@@ -101,13 +111,24 @@ export default function RoaPage() {
     )
   }
 
-  const latestData = allData[0]
+  // Obtener años disponibles
+  const availableYears = Array.from(
+    new Set(allData.map(d => new Date(d.date).getFullYear()))
+  ).sort((a, b) => b - a)
+
+  // Filtrar datos por año seleccionado
+  const filteredData = allData.filter(d => {
+    const year = new Date(d.date).getFullYear()
+    return year === selectedYear
+  })
+
+  const latestData = filteredData.length > 0 ? filteredData[0] : allData[0]
   const displayData = hoveredData || latestData
   
   // Encontrar el mes anterior para comparación
-  const displayIndex = allData.findIndex(d => d.date === displayData.date)
-  const previousData = displayIndex >= 0 && displayIndex < allData.length - 1 
-    ? allData[displayIndex + 1] 
+  const displayIndex = filteredData.findIndex(d => d.date === displayData.date)
+  const previousData = displayIndex >= 0 && displayIndex < filteredData.length - 1 
+    ? filteredData[displayIndex + 1] 
     : null
   
   const cambioVsMesAnterior = previousData 
@@ -127,10 +148,41 @@ export default function RoaPage() {
       />
 
       <div className='p-4 sm:p-6 lg:p-8 space-y-6 sm:space-y-8'>
+        {/* Selector de Año */}
+        <div className='flex justify-end'>
+          <div className='flex items-center gap-2'>
+            <label htmlFor='year-select' className='text-sm font-medium text-gray-700'>
+              Año:
+            </label>
+            <select
+              id='year-select'
+              value={selectedYear}
+              onChange={(e) => setSelectedYear(Number(e.target.value))}
+              className='rounded-md border-2 border-gray-400 bg-gray-50 px-3 py-2 text-sm font-medium text-gray-900 focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500'
+            >
+              {availableYears.map((year) => (
+                <option key={year} value={year}>
+                  {year}
+                </option>
+              ))}
+            </select>
+          </div>
+        </div>
+
+        {/* Validación de datos filtrados */}
+        {filteredData.length === 0 ? (
+          <div className='p-8 text-center text-gray-500'>
+            No se encontraron datos para el año {selectedYear}
+          </div>
+        ) : (
+          <>
         {/* Grid con Gauge y Gráfico */}
         <div className='grid grid-cols-1 lg:grid-cols-[400px_1fr] gap-6'>
           {/* Gauge ROA */}
-          <Card title={`ROA - ${formatSpanishDate(displayData.date)}`}>
+          <Card 
+            title={`ROA - ${formatSpanishDate(displayData.date)}`}
+            key={displayData.date}
+          >
             <div className='flex flex-col items-center justify-center py-4'>
               {/* Gauge circular */}
               <div className='relative w-48 h-48 mb-4'>
@@ -144,7 +196,7 @@ export default function RoaPage() {
                     stroke='#e5e7eb'
                     strokeWidth='8'
                   />
-                  {/* Progreso del círculo - Máximo 20% */}
+                  {/* Progreso del círculo - Proporcional al % real */}
                   <circle
                     cx='50'
                     cy='50'
@@ -152,14 +204,14 @@ export default function RoaPage() {
                     fill='none'
                     stroke={roaColor}
                     strokeWidth='8'
-                    strokeDasharray={`${Math.min((displayData.roa / 20) * 251.2, 251.2)} 251.2`}
+                    strokeDasharray={`${Math.min((displayData.roa / 100) * 251.2, 251.2)} 251.2`}
                     strokeLinecap='round'
                     className='transition-all duration-300'
                   />
                 </svg>
                 {/* Texto central */}
                 <div className='absolute inset-0 flex flex-col items-center justify-center'>
-                  <div className='text-4xl font-bold transition-colors duration-300' style={{ color: roaColor }}>
+                  <div className='text-3xl font-bold transition-colors duration-300' style={{ color: roaColor }}>
                     {displayData.roa.toFixed(2)}%
                   </div>
                   <div className='text-xs font-semibold mt-1 text-gray-600'>
@@ -223,13 +275,15 @@ export default function RoaPage() {
           </Card>
 
           {/* Gráfico de Evolución */}
-          {allData.length > 1 && (
+          {filteredData.length > 1 && (
             <RoaChart 
-              data={allData.slice(0, 12)} 
+              data={filteredData.slice(0, 12)} 
               onHover={setHoveredData}
             />
           )}
         </div>
+          </>
+        )}
 
         {/* Explicación del ROA */}
         <Card title='¿Qué es el ROA?'>

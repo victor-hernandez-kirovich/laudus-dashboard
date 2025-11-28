@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { cn } from '@/lib/utils';
@@ -49,9 +49,16 @@ const navigation = [
 export function Sidebar() {
   const pathname = usePathname();
   const [isOpen, setIsOpen] = useState(false);
-  const [expanded, setExpanded] = useState(false);
+  const [manuallyExpanded, setManuallyExpanded] = useState(false);
 
   const closeSidebar = () => setIsOpen(false);
+
+  // Reset manual expansion when navigating away from Indicadores Financieros
+  useEffect(() => {
+    if (!pathname?.startsWith('/dashboard/indicadores-financieros')) {
+      setManuallyExpanded(false);
+    }
+  }, [pathname]);
 
   return (
     <>
@@ -90,29 +97,31 @@ export function Sidebar() {
         {/* Navigation */}
         <nav className="flex-1 space-y-1 px-3 py-4 overflow-y-auto">
           {navigation.map((item) => {
-            const isActive = pathname === item.href || pathname?.startsWith(item.href + '/');
+            const isActive = pathname === item.href;
             const Icon = item.icon;
 
             // If item has children render expandable section
             if (item.children && item.children.length > 0) {
               const parentActive = pathname?.startsWith(item.href) ?? false;
+              const isExpanded = parentActive || manuallyExpanded;
+              
               return (
                 <div key={item.name}>
                   <button
-                    onClick={() => setExpanded(prev => !prev)}
+                    onClick={() => setManuallyExpanded(prev => !prev)}
                     className={cn(
                       'w-full flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium transition-colors',
-                      parentActive || expanded
+                      parentActive || isExpanded
                         ? 'bg-gray-800 text-white'
                         : 'text-gray-400 hover:bg-gray-800 hover:text-white'
                     )}
                   >
                     <Icon className="h-5 w-5 flex-shrink-0" />
                     <span className="truncate">{item.name}</span>
-                    <span className="ml-auto text-xs opacity-80">{expanded || parentActive ? '▾' : '▸'}</span>
+                    <span className="ml-auto text-xs opacity-80">{isExpanded ? '▾' : '▸'}</span>
                   </button>
 
-                  {(expanded || parentActive) && (
+                  {isExpanded && (
                     <div className="mt-1 ml-8 space-y-1">
                       {item.children.map((child: any) => {
                         const childActive = pathname === child.href;

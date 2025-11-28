@@ -24,10 +24,10 @@ export function DiasCoboPagoChart({ data }: DiasCoboPagoChartProps) {
   // Estado para almacenar el punto seleccionado
   const [selectedData, setSelectedData] = useState<DiasCoboPagoData | null>(null)
 
-  // Usar el dato más reciente como default
+  // Usar el dato más reciente como default (último elemento del array ordenado)
   useEffect(() => {
     if (data.length > 0) {
-      setSelectedData(data[0])
+      setSelectedData(data[data.length - 1])
     }
   }, [data])
 
@@ -38,7 +38,7 @@ export function DiasCoboPagoChart({ data }: DiasCoboPagoChartProps) {
       'Enero', 'Febrero', 'Marzo', 'Abril', 'Mayo', 'Junio',
       'Julio', 'Agosto', 'Septiembre', 'Octubre', 'Noviembre', 'Diciembre'
     ]
-    return `${months[month - 1]} ${year}`
+    return `${months[month - 1]} `
   }
 
   const chartData = data.map(item => ({
@@ -68,8 +68,8 @@ export function DiasCoboPagoChart({ data }: DiasCoboPagoChartProps) {
     return null
   }
 
-  // Usar selectedData para mostrar valores
-  const displayData = selectedData || data[0]
+  // Usar selectedData para mostrar valores (fallback al último mes)
+  const displayData = selectedData || data[data.length - 1]
   const displayDiasCobro = displayData?.diasCobro || 0
   const displayDiasPago = displayData?.diasPago || 0
   const displayGap = displayData?.gap || 0

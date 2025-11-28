@@ -3,8 +3,6 @@
 import { useState, useEffect } from 'react'
 import { Header } from '@/components/layout/Header'
 import { Card } from '@/components/ui/Card'
-import { formatCurrency } from '@/lib/utils'
-import { TrendingUp, TrendingDown, DollarSign, Minus } from 'lucide-react'
 import { MargenRentabilidadChart } from '@/components/charts/MargenRentabilidadChart'
 
 interface MargenData {
@@ -22,15 +20,7 @@ export default function MargenRentabilidadPage() {
   const [allData, setAllData] = useState<any[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
-
-  const formatSpanishDate = (dateString: string): string => {
-    const [year, month, day] = dateString.split('-').map(Number)
-    const months = [
-      'Ene', 'Feb', 'Mar', 'Abr', 'May', 'Jun',
-      'Jul', 'Ago', 'Sep', 'Oct', 'Nov', 'Dic'
-    ]
-    return `${day} ${months[month - 1]} ${year}`
-  }
+  const [selectedYear, setSelectedYear] = useState<number>(0)
 
   useEffect(() => {
     async function fetchData() {
@@ -38,7 +28,16 @@ export default function MargenRentabilidadPage() {
         const res = await fetch('/api/data/8columns')
         if (!res.ok) throw new Error('Error al cargar datos')
         const result = await res.json()
-        setAllData(result.data)
+        const sortedData = (result.data || []).sort((a: any, b: any) => 
+          b.date.localeCompare(a.date)
+        )
+        setAllData(sortedData)
+        
+        // Establecer el año más reciente como seleccionado
+        if (sortedData.length > 0) {
+          const mostRecentYear = new Date(sortedData[0].date).getFullYear()
+          setSelectedYear(mostRecentYear)
+        }
       } catch (err) {
         setError(err instanceof Error ? err.message : 'Error desconocido')
       } finally {
@@ -48,9 +47,20 @@ export default function MargenRentabilidadPage() {
     fetchData()
   }, [])
 
+  // Obtener años disponibles
+  const availableYears = Array.from(
+    new Set(allData.map(d => new Date(d.date).getFullYear()))
+  ).sort((a, b) => b - a)
+
+  // Filtrar datos por año seleccionado
+  const filteredData = allData.filter(d => {
+    const year = new Date(d.date).getFullYear()
+    return year === selectedYear
+  })
+
   // Calcular Márgenes de Rentabilidad (Neto y Operacional) para cada fecha
   const calculateMargenRentabilidad = (): MargenData[] => {
-    return allData.map(record => {
+    return filteredData.map(record => {
       const records = record.data || []
       
       // Buscar la fila "Sumas" que contiene los totales
@@ -136,40 +146,6 @@ export default function MargenRentabilidadPage() {
   }
 
   const margenData = calculateMargenRentabilidad()
-  const latestMargen = margenData[0]
-  const previousMargen = margenData.length > 1 ? margenData[1] : null
-  
-  // Calcular cambio vs mes anterior - Margen Neto
-  const cambioVsMesAnterior = previousMargen 
-    ? latestMargen.margenNeto - previousMargen.margenNeto 
-    : 0
-  
-  const tendencia = cambioVsMesAnterior > 0 ? 'up' : cambioVsMesAnterior < 0 ? 'down' : 'neutral'
-
-  // Calcular cambio vs mes anterior - Margen Operacional
-  const cambioOperacionalVsMesAnterior = previousMargen 
-    ? latestMargen.margenOperacional - previousMargen.margenOperacional 
-    : 0
-  
-  const tendenciaOperacional = cambioOperacionalVsMesAnterior > 0 ? 'up' : cambioOperacionalVsMesAnterior < 0 ? 'down' : 'neutral'
-
-  // Determinar color del gauge según el margen
-  const getMargenColor = (margen: number): string => {
-    if (margen >= 20) return '#10b981' // Verde - Excelente
-    if (margen >= 10) return '#3b82f6' // Azul - Bueno
-    if (margen >= 5) return '#f59e0b' // Amarillo - Regular
-    return '#ef4444' // Rojo - Bajo
-  }
-
-  const getMargenLabel = (margen: number): string => {
-    if (margen >= 20) return 'Excelente'
-    if (margen >= 10) return 'Bueno'
-    if (margen >= 5) return 'Regular'
-    return 'Bajo'
-  }
-
-  const margenColor = getMargenColor(latestMargen.margenNeto)
-  const margenLabel = getMargenLabel(latestMargen.margenNeto)
 
   return (
     <div>
@@ -179,410 +155,35 @@ export default function MargenRentabilidadPage() {
       />
 
       <div className='p-4 sm:p-6 lg:p-8 space-y-6 sm:space-y-8'>
-        {/* KPI Cards + Gauges - Margen Neto y Operacional */}
-        <div className='grid grid-cols-1 lg:grid-cols-2 gap-6'>
-          {/* Margen Neto Actual - Gauge Style */}
-          <Card title={`Margen Neto - ${formatSpanishDate(latestMargen.date)}`} className='lg:col-span-1'>
-            <div className='flex flex-col items-center justify-center py-8'>
-              {/* Gauge circular simulado */}
-              <div className='relative w-48 h-48 mb-4'>
-                <svg className='w-full h-full transform -rotate-90' viewBox='0 0 100 100'>
-                  {/* Fondo del círculo */}
-                  <circle
-                    cx='50'
-                    cy='50'
-                    r='40'
-                    fill='none'
-                    stroke='#e5e7eb'
-                    strokeWidth='8'
-                  />
-                  {/* Progreso del círculo */}
-                  <circle
-                    cx='50'
-                    cy='50'
-                    r='40'
-                    fill='none'
-                    stroke={margenColor}
-                    strokeWidth='8'
-                    strokeDasharray={`${(latestMargen.margenNeto / 100) * 251.2} 251.2`}
-                    strokeLinecap='round'
-                  />
-                </svg>
-                {/* Texto central */}
-                <div className='absolute inset-0 flex flex-col items-center justify-center'>
-                  <div className='text-5xl font-bold' style={{ color: margenColor }}>
-                    {latestMargen.margenNeto.toFixed(1)}%
-                  </div>
-                  <div className='text-sm font-semibold mt-2' style={{ color: margenColor }}>
-                    {margenLabel}
-                  </div>
-                </div>
-              </div>
-
-              {/* Comparación con mes anterior */}
-              {previousMargen && (
-                <div className='flex items-center gap-2 mt-4'>
-                  {tendencia === 'up' && (
-                    <>
-                      <TrendingUp className='h-5 w-5 text-green-600' />
-                      <span className='text-green-600 font-semibold'>
-                        +{cambioVsMesAnterior.toFixed(2)}%
-                      </span>
-                    </>
-                  )}
-                  {tendencia === 'down' && (
-                    <>
-                      <TrendingDown className='h-5 w-5 text-red-600' />
-                      <span className='text-red-600 font-semibold'>
-                        {cambioVsMesAnterior.toFixed(2)}%
-                      </span>
-                    </>
-                  )}
-                  {tendencia === 'neutral' && (
-                    <>
-                      <Minus className='h-5 w-5 text-gray-600' />
-                      <span className='text-gray-600 font-semibold'>
-                        Sin cambio
-                      </span>
-                    </>
-                  )}
-                  <span className='text-sm text-gray-600'>vs mes anterior</span>
-                </div>
-              )}
-            </div>
-          </Card>
-
-          {/* Margen Operacional - Gauge Style */}
-          <Card title={`Margen Operacional - ${formatSpanishDate(latestMargen.date)}`} className='lg:col-span-1'>
-            <div className='flex flex-col items-center justify-center py-8'>
-              {/* Gauge circular simulado */}
-              <div className='relative w-48 h-48 mb-4'>
-                <svg className='w-full h-full transform -rotate-90' viewBox='0 0 100 100'>
-                  {/* Fondo del círculo */}
-                  <circle
-                    cx='50'
-                    cy='50'
-                    r='40'
-                    fill='none'
-                    stroke='#e5e7eb'
-                    strokeWidth='8'
-                  />
-                  {/* Progreso del círculo */}
-                  <circle
-                    cx='50'
-                    cy='50'
-                    r='40'
-                    fill='none'
-                    stroke={getMargenColor(latestMargen.margenOperacional)}
-                    strokeWidth='8'
-                    strokeDasharray={`${(latestMargen.margenOperacional / 100) * 251.2} 251.2`}
-                    strokeLinecap='round'
-                  />
-                </svg>
-                {/* Texto central */}
-                <div className='absolute inset-0 flex flex-col items-center justify-center'>
-                  <div className='text-5xl font-bold' style={{ color: getMargenColor(latestMargen.margenOperacional) }}>
-                    {latestMargen.margenOperacional.toFixed(1)}%
-                  </div>
-                  <div className='text-sm font-semibold mt-2' style={{ color: getMargenColor(latestMargen.margenOperacional) }}>
-                    {getMargenLabel(latestMargen.margenOperacional)}
-                  </div>
-                </div>
-              </div>
-
-              {/* Comparación con mes anterior */}
-              {previousMargen && (
-                <div className='flex items-center gap-2 mt-4'>
-                  {tendenciaOperacional === 'up' && (
-                    <>
-                      <TrendingUp className='h-5 w-5 text-green-600' />
-                      <span className='text-green-600 font-semibold'>
-                        +{cambioOperacionalVsMesAnterior.toFixed(2)}%
-                      </span>
-                    </>
-                  )}
-                  {tendenciaOperacional === 'down' && (
-                    <>
-                      <TrendingDown className='h-5 w-5 text-red-600' />
-                      <span className='text-red-600 font-semibold'>
-                        {cambioOperacionalVsMesAnterior.toFixed(2)}%
-                      </span>
-                    </>
-                  )}
-                  {tendenciaOperacional === 'neutral' && (
-                    <>
-                      <Minus className='h-5 w-5 text-gray-600' />
-                      <span className='text-gray-600 font-semibold'>
-                        Sin cambio
-                      </span>
-                    </>
-                  )}
-                  <span className='text-sm text-gray-600'>vs mes anterior</span>
-                </div>
-              )}
-
-              {/* Nota explicativa */}
-              <div className='mt-4 pt-4 border-t border-gray-200 w-full'>
-                <p className='text-xs text-center text-gray-500'>
-                  Solo incluye gastos operacionales (cuentas 31 y 32)
-                </p>
-              </div>
-            </div>
-          </Card>
+        {/* Selector de Año */}
+        <div className='flex justify-end'>
+          <div className='flex items-center gap-2'>
+            <label htmlFor='year-select' className='text-sm font-medium text-gray-700'>
+              Año:
+            </label>
+            <select
+              id='year-select'
+              value={selectedYear}
+              onChange={(e) => setSelectedYear(Number(e.target.value))}
+              className='rounded-md border-2 border-gray-400 bg-gray-50 px-3 py-2 text-sm font-medium text-gray-900 focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500'
+            >
+              {availableYears.map((year) => (
+                <option key={year} value={year}>
+                  {year}
+                </option>
+              ))}
+            </select>
+          </div>
         </div>
 
-        {/* Desglose Financiero Comparativo */}
-        <div className='grid grid-cols-1 lg:grid-cols-2 gap-6'>
-          {/* Desglose Margen Neto */}
-          <Card title='Desglose Margen Neto' className='lg:col-span-1'>
-            <div className='space-y-6 py-4'>
-              {/* Ingresos */}
-              <div className='flex items-center justify-between pb-4 border-b border-gray-200'>
-                <div className='flex items-center gap-3'>
-                  <div className='w-10 h-10 bg-green-100 rounded-lg flex items-center justify-center'>
-                    <DollarSign className='h-6 w-6 text-green-600' />
-                  </div>
-                  <div>
-                    <div className='text-sm text-gray-600'>Ingresos Totales</div>
-                    <div className='text-2xl font-bold text-green-600'>
-                      {formatCurrency(latestMargen.ingresos)}
-                    </div>
-                  </div>
-                </div>
-                <div className='text-right'>
-                  <div className='text-sm text-gray-600'>100%</div>
-                  <div className='text-xs text-gray-500'>del total</div>
-                </div>
-              </div>
-
-              {/* Gastos */}
-              <div className='flex items-center justify-between pb-4 border-b border-gray-200'>
-                <div className='flex items-center gap-3'>
-                  <div className='w-10 h-10 bg-red-100 rounded-lg flex items-center justify-center'>
-                    <TrendingDown className='h-6 w-6 text-red-600' />
-                  </div>
-                  <div>
-                    <div className='text-sm text-gray-600'>Gastos Totales</div>
-                    <div className='text-2xl font-bold text-red-600'>
-                      {formatCurrency(latestMargen.gastos)}
-                    </div>
-                  </div>
-                </div>
-                <div className='text-right'>
-                  <div className='text-sm text-gray-600'>
-                    {((latestMargen.gastos / latestMargen.ingresos) * 100).toFixed(1)}%
-                  </div>
-                  <div className='text-xs text-gray-500'>del total</div>
-                </div>
-              </div>
-
-              {/* Utilidad Neta */}
-              <div className='flex items-center justify-between pt-2'>
-                <div className='flex items-center gap-3'>
-                  <div className='w-10 h-10 bg-blue-100 rounded-lg flex items-center justify-center'>
-                    <TrendingUp className='h-6 w-6 text-blue-600' />
-                  </div>
-                  <div>
-                    <div className='text-sm text-gray-600 font-semibold'>Utilidad Neta</div>
-                    <div className='text-3xl font-bold text-blue-600'>
-                      {formatCurrency(latestMargen.utilidadNeta)}
-                    </div>
-                  </div>
-                </div>
-                <div className='text-right'>
-                  <div className='text-lg font-bold' style={{ color: margenColor }}>
-                    {latestMargen.margenNeto.toFixed(2)}%
-                  </div>
-                  <div className='text-xs text-gray-500'>margen neto</div>
-                </div>
-              </div>
-            </div>
-          </Card>
-
-          {/* Desglose Margen Operacional */}
-          <Card title='Desglose Margen Operacional' className='lg:col-span-1'>
-            <div className='space-y-6 py-4'>
-              {/* Ingresos */}
-              <div className='flex items-center justify-between pb-4 border-b border-gray-200'>
-                <div className='flex items-center gap-3'>
-                  <div className='w-10 h-10 bg-green-100 rounded-lg flex items-center justify-center'>
-                    <DollarSign className='h-6 w-6 text-green-600' />
-                  </div>
-                  <div>
-                    <div className='text-sm text-gray-600'>Ingresos Totales</div>
-                    <div className='text-2xl font-bold text-green-600'>
-                      {formatCurrency(latestMargen.ingresos)}
-                    </div>
-                  </div>
-                </div>
-                <div className='text-right'>
-                  <div className='text-sm text-gray-600'>100%</div>
-                  <div className='text-xs text-gray-500'>del total</div>
-                </div>
-              </div>
-
-              {/* Gastos Operacionales */}
-              <div className='flex items-center justify-between pb-4 border-b border-gray-200'>
-                <div className='flex items-center gap-3'>
-                  <div className='w-10 h-10 bg-orange-100 rounded-lg flex items-center justify-center'>
-                    <TrendingDown className='h-6 w-6 text-orange-600' />
-                  </div>
-                  <div>
-                    <div className='text-sm text-gray-600'>Gastos Operacionales</div>
-                    <div className='text-xs text-gray-500'>(Cuentas 31 y 32)</div>
-                    <div className='text-2xl font-bold text-orange-600'>
-                      {formatCurrency(latestMargen.gastosOperacionales)}
-                    </div>
-                  </div>
-                </div>
-                <div className='text-right'>
-                  <div className='text-sm text-gray-600'>
-                    {((latestMargen.gastosOperacionales / latestMargen.ingresos) * 100).toFixed(1)}%
-                  </div>
-                  <div className='text-xs text-gray-500'>del total</div>
-                </div>
-              </div>
-
-              {/* Utilidad Operacional */}
-              <div className='flex items-center justify-between pt-2'>
-                <div className='flex items-center gap-3'>
-                  <div className='w-10 h-10 bg-green-100 rounded-lg flex items-center justify-center'>
-                    <TrendingUp className='h-6 w-6 text-green-600' />
-                  </div>
-                  <div>
-                    <div className='text-sm text-gray-600 font-semibold'>Utilidad Operacional</div>
-                    <div className='text-3xl font-bold text-green-600'>
-                      {formatCurrency(latestMargen.utilidadOperacional)}
-                    </div>
-                  </div>
-                </div>
-                <div className='text-right'>
-                  <div className='text-lg font-bold' style={{ color: getMargenColor(latestMargen.margenOperacional) }}>
-                    {latestMargen.margenOperacional.toFixed(2)}%
-                  </div>
-                  <div className='text-xs text-gray-500'>margen operacional</div>
-                </div>
-              </div>
-            </div>
-          </Card>
-        </div>
-
-        {/* Gráfico de Evolución */}
-        {margenData.length > 1 && (
+        {/* Validación de datos filtrados */}
+        {margenData.length === 0 ? (
+          <div className='p-8 text-center text-gray-500'>
+            No se encontraron datos para el año {selectedYear}
+          </div>
+        ) : (
           <MargenRentabilidadChart data={margenData.slice(0, 12)} />
         )}
-
-        {/* Interpretación - Ambos Márgenes */}
-        <Card title='¿Qué son los Márgenes de Rentabilidad?'>
-          <div className='text-sm text-gray-700 space-y-6'>
-            {/* Margen Neto */}
-            <div>
-              <h3 className='text-lg font-semibold text-blue-700 mb-2'>Margen de Rentabilidad Neta</h3>
-              <p>
-                El <strong>Margen Neto</strong> muestra qué porcentaje de las ventas se convierte finalmente en ganancia 
-                después de descontar <strong>todos los gastos</strong> (operacionales y no operacionales).
-              </p>
-              
-              <div className='bg-blue-50 border-l-4 border-blue-500 p-4 my-3'>
-                <p className='font-semibold text-blue-900 mb-2'>Fórmula:</p>
-                <p className='text-blue-800 font-mono text-sm'>
-                  Margen Neto = (Utilidad Neta / Ingresos Totales) × 100
-                </p>
-                <p className='text-blue-800 font-mono text-sm mt-1'>
-                  Utilidad Neta = Ingresos - Todos los Gastos
-                </p>
-              </div>
-            </div>
-
-            {/* Margen Operacional */}
-            <div className='pt-4 border-t border-gray-200'>
-              <h3 className='text-lg font-semibold text-green-700 mb-2'>Margen Operacional</h3>
-              <p>
-                El <strong>Margen Operacional</strong> muestra qué porcentaje de las ventas se convierte en ganancia 
-                después de descontar <strong>solo los gastos operacionales</strong> (cuentas 31: Costo de Explotación y 32: Gastos Operacionales), 
-                excluyendo gastos financieros y otros gastos no operacionales (cuenta 34).
-              </p>
-              
-              <div className='bg-green-50 border-l-4 border-green-500 p-4 my-3'>
-                <p className='font-semibold text-green-900 mb-2'>Fórmula:</p>
-                <p className='text-green-800 font-mono text-sm'>
-                  Margen Operacional = (Utilidad Operacional / Ingresos Totales) × 100
-                </p>
-                <p className='text-green-800 font-mono text-sm mt-1'>
-                  Utilidad Operacional = Ingresos - Gastos Operacionales (Cuentas 31 + 32)
-                </p>
-              </div>
-            </div>
-
-            {/* Diferencia clave */}
-            <div className='bg-amber-50 border-l-4 border-amber-500 p-4'>
-              <p className='font-semibold text-amber-900 mb-2'>Diferencia Clave:</p>
-              <p className='text-amber-800 text-sm'>
-                La diferencia entre ambos márgenes muestra el impacto de los <strong>gastos no operacionales</strong> 
-                (principalmente gastos financieros). Un Margen Operacional significativamente mayor al Margen Neto 
-                indica que la empresa tiene altos costos financieros o gastos extraordinarios.
-              </p>
-            </div>
-
-            <div>
-              <p className='font-semibold mb-2'>Interpretación:</p>
-              <ul className='space-y-2 pl-4'>
-                <li className='flex items-start gap-2'>
-                  <span className='text-green-600 font-bold'>•</span>
-                  <span>
-                    <strong className='text-green-600'>≥ 20%:</strong> Excelente rentabilidad. 
-                    La empresa es muy eficiente convirtiendo ventas en ganancias.
-                  </span>
-                </li>
-                <li className='flex items-start gap-2'>
-                  <span className='text-blue-600 font-bold'>•</span>
-                  <span>
-                    <strong className='text-blue-600'>10-20%:</strong> Buena rentabilidad. 
-                    Margen saludable para la mayoría de las industrias.
-                  </span>
-                </li>
-                <li className='flex items-start gap-2'>
-                  <span className='text-orange-600 font-bold'>•</span>
-                  <span>
-                    <strong className='text-orange-600'>5-10%:</strong> Rentabilidad regular. 
-                    Hay espacio para mejorar la eficiencia operativa.
-                  </span>
-                </li>
-                <li className='flex items-start gap-2'>
-                  <span className='text-red-600 font-bold'>•</span>
-                  <span>
-                    <strong className='text-red-600'>&lt; 5%:</strong> Rentabilidad baja. 
-                    Se requiere revisar costos y estrategia de precios.
-                  </span>
-                </li>
-              </ul>
-            </div>
-
-            <div className='bg-gray-50 p-4 rounded-lg mt-4'>
-              <p className='font-semibold mb-2'>Ejemplo práctico:</p>
-              <p>
-                Si tu empresa vende <strong>$1,000,000</strong> y al final del período tiene 
-                una utilidad neta de <strong>$150,000</strong>:
-              </p>
-              <p className='mt-2 font-mono text-sm bg-white p-2 rounded'>
-                Margen Neto = (150,000 / 1,000,000) × 100 = <strong className='text-blue-600'>15%</strong>
-              </p>
-              <p className='mt-2'>
-                Esto significa que por cada <strong>$100 vendidos</strong>, la empresa gana <strong>$15</strong> de utilidad neta.
-              </p>
-            </div>
-
-            <div className='mt-4'>
-              <p className='font-semibold mb-2'>Tu margen actual ({latestMargen.margenNeto.toFixed(2)}%):</p>
-              <p>
-                Por cada <strong>$100 en ventas</strong>, tu empresa está generando{' '}
-                <strong style={{ color: margenColor }}>
-                  ${latestMargen.margenNeto.toFixed(2)} de utilidad neta
-                </strong>.
-              </p>
-            </div>
-          </div>
-        </Card>
       </div>
     </div>
   )

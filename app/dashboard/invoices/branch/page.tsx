@@ -6,6 +6,8 @@ import { formatCurrency } from '@/lib/utils'
 import { Building2 } from 'lucide-react'
 import { Header } from '@/components/layout/Header'
 import { TopSucursalesChart } from '@/components/charts/TopSucursalesChart'
+import { BranchMonthlyTrendsChart } from '@/components/charts/BranchMonthlyTrendsChart'
+import { BranchMarketShareChart } from '@/components/charts/BranchMarketShareChart'
 
 interface BranchData {
   branch: string
@@ -57,6 +59,7 @@ interface BranchAnnualData {
 export default function InvoicesByBranchPage() {
   const [allData, setAllData] = useState<InvoicesByBranchData[]>([])
   const [selectedYear, setSelectedYear] = useState<number>(0)
+  const [selectedMonth, setSelectedMonth] = useState<number>(0)
   const [loading, setLoading] = useState(true)
 
   useEffect(() => {
@@ -71,8 +74,9 @@ export default function InvoicesByBranchPage() {
       
       if (result.success && result.data.length > 0) {
         setAllData(result.data)
-        // Select the most recent year by default
+        // Select the most recent year and month by default
         setSelectedYear(result.data[0].year)
+        setSelectedMonth(result.data[0].monthNumber)
       }
     } catch (error) {
       console.error('Error fetching invoices by branch:', error)
@@ -83,6 +87,19 @@ export default function InvoicesByBranchPage() {
 
   // Get unique years for year selector
   const availableYears = Array.from(new Set(allData.map(d => d.year))).sort((a, b) => b - a)
+  
+  // Get available months for selected year
+  const availableMonths = Array.from(
+    allData
+      .filter((d) => d.year === selectedYear)
+      .reduce((map, d) => {
+        if (!map.has(d.monthNumber)) {
+          map.set(d.monthNumber, { monthNumber: d.monthNumber, monthName: d.monthName });
+        }
+        return map;
+      }, new Map<number, { monthNumber: number; monthName: string }>())
+      .values()
+  ).sort((a, b) => b.monthNumber - a.monthNumber)
   
   // Process data to create annual view by branch
   const processAnnualData = (): BranchAnnualData[] => {
@@ -237,6 +254,53 @@ export default function InvoicesByBranchPage() {
     }))
   }
 
+  // Prepare data for Monthly Trends Chart (line chart)
+  const prepareMonthlyTrendsData = () => {
+    const monthNames = [
+      "Enero", "Febrero", "Marzo", "Abril", "Mayo", "Junio",
+      "Julio", "Agosto", "Septiembre", "Octubre", "Noviembre", "Diciembre"
+    ]
+
+    const monthlyData: any[] = []
+
+    // For each month, create an object with all branch values
+    for (let i = 1; i <= 12; i++) {
+      const monthObj: any = {
+        monthName: monthNames[i - 1],
+        monthNumber: i
+      }
+      
+      branchesAnnualData.forEach(branch => {
+        monthObj[branch.branch] = branch.months[i] ? branch.months[i].net : 0
+      })
+
+      monthlyData.push(monthObj)
+    }
+
+    return monthlyData
+  }
+
+  // Prepare data for Market Share Chart (pie chart for selected month)
+  const prepareMarketShareData = () => {
+    const monthData = allData.find(
+      (d) => d.year === selectedYear && d.monthNumber === selectedMonth
+    )
+
+    if (!monthData) return []
+
+    return monthData.branches
+      .map((branch, index) => ({
+        branch: branch.branch,
+        net: branch.net,
+        netPercentage: branch.netPercentage,
+        color: branchColors[index % branchColors.length],
+      }))
+      .sort((a, b) => b.net - a.net)
+  }
+
+  const selectedMonthName = 
+    allData.find((d) => d.year === selectedYear && d.monthNumber === selectedMonth)?.monthName || ""
+
   if (loading) {
     return (
       <div>
@@ -387,11 +451,177 @@ export default function InvoicesByBranchPage() {
                 <h3 className="text-lg font-bold text-gray-900">
                   📊 Comparativo Ventas Netas por Sucursal
                 </h3>
-               
-                
+                <p className="text-sm text-gray-600 mt-1">
+                  Ventas mensuales apiladas por sucursal - {selectedYear}
+                </p>
               </div>
               <TopSucursalesChart 
                 data={prepareTopSucursalesData()} 
+                branches={prepareBranchInfo()}
+              />
+            </div>
+          </Card>
+
+          {/* Gráfica 2: Participación de Mercado (Pie Chart) */}
+          <Card>
+            <div className="p-6">
+              <div className="mb-4">
+                <h3 className="text-lg font-bold text-gray-900">
+                  🥧 Distribución de Ventas por Sucursal
+                </h3>
+                <p className="text-sm text-gray-600 mt-1">
+                  Participación porcentual en ventas netas mensuales
+                </p>
+
+                {/* Selector de Mes */}
+                <div className="mt-3 w-full md:w-1/2">
+                  <div className="bg-gray-50 border rounded-lg p-4">
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                      <div>
+                        <label className="block text-sm font-medium text-gray-700 mb-2">
+                          Año:
+                        </label>
+                        <select
+                          value={selectedYear}
+                          onChange={(e) => {
+                            const newYear = Number(e.target.value);
+                            setSelectedYear(newYear);
+                            // Reset month to first available for new year
+                            const monthsForYear = allData
+                              .filter((d) => d.year === newYear)
+                              .map((d) => d.monthNumber)
+                              .sort((a, b) => b - a);
+                            if (monthsForYear.length > 0) {
+                              setSelectedMonth(monthsForYear[0]);
+                            }
+                          }}
+                          className="w-full px-4 py-2 border-2 border-gray-400 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500 bg-white font-medium text-gray-900"
+                        >
+                          {availableYears.map((year) => (
+                            <option key={year} value={year}>
+                              {year}
+                            </option>
+                          ))}
+                        </select>
+                      </div>
+
+                      <div>
+                        <label className="block text-sm font-medium text-gray-700 mb-2">
+                          Mes:
+                        </label>
+                        <select
+                          value={selectedMonth}
+                          onChange={(e) => setSelectedMonth(Number(e.target.value))}
+                          className="w-full px-4 py-2 border-2 border-gray-400 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500 bg-white font-medium text-gray-900"
+                        >
+                          {availableMonths.map((m) => (
+                            <option key={m.monthNumber} value={m.monthNumber}>
+                              {m.monthName}
+                            </option>
+                          ))}
+                        </select>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+                {/* Columna Izquierda: Card de Evolución */}
+                <div className="lg:col-span-1">
+                  <Card>
+                    <div className="p-4">
+                      <h4 className="text-sm font-bold text-gray-900 mb-3">
+                        📊 Resumen - {selectedMonthName} {selectedYear}
+                      </h4>
+                      <div className="space-y-3 max-h-[400px] overflow-y-auto">
+                        {prepareMarketShareData().map((branch, index) => (
+                          <div
+                            key={branch.branch}
+                            className="p-3 bg-gray-50 rounded-lg border border-gray-200"
+                          >
+                            <div className="flex items-center justify-between mb-1">
+                              <div className="flex items-center gap-2">
+                                <div
+                                  className="w-3 h-3 rounded-full"
+                                  style={{ backgroundColor: branch.color }}
+                                />
+                                <span className="text-xs font-semibold text-gray-900">
+                                  #{index + 1} {branch.branch}
+                                </span>
+                              </div>
+                            </div>
+                            <div className="space-y-1">
+                              <div className="flex justify-between items-center">
+                                <span className="text-xs text-gray-600">Ventas:</span>
+                                <span className="text-xs font-medium text-gray-900">
+                                  {formatCurrency(branch.net)}
+                                </span>
+                              </div>
+                              <div className="flex justify-between items-center">
+                                <span className="text-xs text-gray-600">Participación:</span>
+                                <span className="text-xs font-bold text-green-600">
+                                  {branch.netPercentage.toFixed(2)}%
+                                </span>
+                              </div>
+                              {/* Barra de progreso */}
+                              <div className="mt-2">
+                                <div className="w-full bg-gray-200 rounded-full h-2">
+                                  <div
+                                    className="h-2 rounded-full transition-all duration-300"
+                                    style={{
+                                      width: `${branch.netPercentage}%`,
+                                      backgroundColor: branch.color,
+                                    }}
+                                  />
+                                </div>
+                              </div>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  </Card>
+                </div>
+
+                {/* Columna Derecha: Gráfico Circular */}
+                <div className="lg:col-span-2">
+                  {prepareMarketShareData().length > 0 ? (
+                    <BranchMarketShareChart data={prepareMarketShareData()} />
+                  ) : (
+                    <div className="text-center py-12 text-gray-500">
+                      No hay datos disponibles para el mes seleccionado
+                    </div>
+                  )}
+                </div>
+              </div>
+            </div>
+          </Card>
+
+          {/* Gráfica 3: Evolución Mensual (Líneas) */}
+          <Card>
+            <div className="p-6">
+              <div className="mb-4">
+                <h3 className="text-lg font-bold text-gray-900">
+                  📈 Evolución Mensual de Ventas por Sucursal
+                </h3>
+                <p className="text-sm text-gray-600 mt-1">
+                  Tendencias y estacionalidad de ventas netas - {selectedYear}
+                </p>
+                <div className="mt-3 p-3 bg-green-50 rounded-lg border border-green-200">
+                  <p className="text-xs font-semibold text-green-900 mb-1">
+                    💡 Análisis:
+                  </p>
+                  <p className="text-xs text-green-800">
+                    Identifica patrones estacionales, tendencias de crecimiento y compara el desempeño temporal de cada sucursal.
+                  </p>
+                  <p className="text-xs text-green-700 mt-1">
+                    Las líneas paralelas indican crecimiento similar, mientras que líneas divergentes muestran cambios en posicionamiento relativo.
+                  </p>
+                </div>
+              </div>
+              <BranchMonthlyTrendsChart 
+                data={prepareMonthlyTrendsData()} 
                 branches={prepareBranchInfo()}
               />
             </div>

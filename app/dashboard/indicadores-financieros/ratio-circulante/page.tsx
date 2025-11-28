@@ -10,6 +10,7 @@ export default function RatioCirculantePage() {
   const [allData, setAllData] = useState<any[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
+  const [selectedYear, setSelectedYear] = useState<number>(0)
 
   useEffect(() => {
     async function fetchData() {
@@ -17,7 +18,16 @@ export default function RatioCirculantePage() {
         const res = await fetch('/api/data/8columns')
         if (!res.ok) throw new Error('Error al cargar datos')
         const result = await res.json()
-        setAllData(result.data || [])
+        const sortedData = (result.data || []).sort((a: any, b: any) => 
+          b.date.localeCompare(a.date)
+        )
+        setAllData(sortedData)
+        
+        // Establecer el año más reciente como seleccionado
+        if (sortedData.length > 0) {
+          const mostRecentYear = new Date(sortedData[0].date).getFullYear()
+          setSelectedYear(mostRecentYear)
+        }
       } catch (err) {
         setError(err instanceof Error ? err.message : 'Error desconocido')
         console.error(err)
@@ -28,9 +38,20 @@ export default function RatioCirculantePage() {
     fetchData()
   }, [])
 
+  // Obtener años disponibles
+  const availableYears = Array.from(
+    new Set(allData.map(d => new Date(d.date).getFullYear()))
+  ).sort((a, b) => b - a)
+
+  // Filtrar datos por año seleccionado
+  const filteredData = allData.filter(d => {
+    const year = new Date(d.date).getFullYear()
+    return year === selectedYear
+  })
+
   const calculateRatios = () => {
-    if (!allData || allData.length === 0) return []
-    return allData.map((record: any) => {
+    if (!filteredData || filteredData.length === 0) return []
+    return filteredData.map((record: any) => {
       const records = record.data || []
       
       // Buscar Activos Corrientes (accountNumber "11")
@@ -92,13 +113,41 @@ export default function RatioCirculantePage() {
             <div className='p-8 text-center text-gray-600'>Cargando datos...</div>
           ) : error ? (
             <div className='p-8 text-center text-red-600'>Error: {error}</div>
-          ) : data.length === 0 ? (
-            <div className='p-8 text-center text-gray-500'>No hay datos disponibles</div>
           ) : (
-            <div>
-              <div className='mb-4 text-sm text-gray-600'>Última actualización: {new Date(data[0].date).toLocaleDateString('es-CL')}</div>
-              <CurrentRatioChart data={data} />
-            </div>
+            <>
+              {/* Selector de Año */}
+              <div className='mb-6 flex justify-end'>
+                <div className='flex items-center gap-2'>
+                  <label htmlFor='year-select' className='text-sm font-medium text-gray-700'>
+                    Año:
+                  </label>
+                  <select
+                    id='year-select'
+                    value={selectedYear}
+                    onChange={(e) => setSelectedYear(Number(e.target.value))}
+                    className='rounded-md border-2 border-gray-400 bg-gray-50 px-3 py-2 text-sm font-medium text-gray-900 focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500'
+                  >
+                    {availableYears.map((year) => (
+                      <option key={year} value={year}>
+                        {year}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+              </div>
+
+              {/* Validación de datos filtrados */}
+              {data.length === 0 ? (
+                <div className='p-8 text-center text-gray-500'>
+                  No se encontraron datos para el año {selectedYear}
+                </div>
+              ) : (
+                <div>
+                  <div className='mb-4 text-sm text-gray-600'>Última actualización: {new Date(data[0].date).toLocaleDateString('es-CL')}</div>
+                  <CurrentRatioChart data={data} />
+                </div>
+              )}
+            </>
           )}
         </Card>
       </div>

@@ -33,8 +33,10 @@ interface DiasCoboPagoData {
 
 export default function DiasCobroPagoPage() {
   const [chartData, setChartData] = useState<DiasCoboPagoData[]>([])
+  const [allData, setAllData] = useState<DiasCoboPagoData[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
+  const [selectedYear, setSelectedYear] = useState<number>(0)
 
   useEffect(() => {
     fetchData()
@@ -82,7 +84,16 @@ export default function DiasCobroPagoPage() {
 
       const monthlyCalculatedData = filterMonthlyCalculated(calculatedData)
       
-      setChartData(monthlyCalculatedData)
+      // Ordenar por fecha ascendente (enero a diciembre) y almacenar todos los datos
+      const sortedData = monthlyCalculatedData.sort((a, b) => a.date.localeCompare(b.date))
+      setAllData(sortedData)
+      
+      // Establecer el año más reciente como seleccionado
+      if (sortedData.length > 0) {
+        const mostRecentYear = new Date(sortedData[0].date).getFullYear()
+        setSelectedYear(mostRecentYear)
+      }
+      
       setLoading(false)
     } catch (err) {
       console.error('Error fetching data:', err)
@@ -90,6 +101,17 @@ export default function DiasCobroPagoPage() {
       setLoading(false)
     }
   }
+
+  // Obtener años disponibles
+  const availableYears = Array.from(
+    new Set(allData.map(d => new Date(d.date).getFullYear()))
+  ).sort((a, b) => b - a)
+
+  // Filtrar datos por año seleccionado
+  const filteredData = allData.filter(d => {
+    const year = new Date(d.date).getFullYear()
+    return year === selectedYear
+  })
 
   const calculateDiasCoboPago = (documents: Balance8ColumnsDocument[]): DiasCoboPagoData[] => {
     return documents.map((doc, index) => {
@@ -195,16 +217,7 @@ export default function DiasCobroPagoPage() {
     )
   }
 
-  if (chartData.length === 0) {
-    return (
-      <div className='flex items-center justify-center min-h-screen'>
-        <div className='bg-yellow-50 border-2 border-yellow-200 rounded-lg p-6 max-w-md'>
-          <h2 className='text-yellow-800 font-bold text-lg mb-2'>Sin Datos</h2>
-          <p className='text-yellow-600'>No hay datos disponibles para mostrar.</p>
-        </div>
-      </div>
-    )
-  }
+
 
   return (
     <div className='p-6'>
@@ -215,7 +228,36 @@ export default function DiasCobroPagoPage() {
         </p>
       </div>
 
-      <DiasCoboPagoChart data={chartData} />
+      {/* Selector de Año */}
+      <div className='mb-6 flex justify-end'>
+        <div className='flex items-center gap-2'>
+          <label htmlFor='year-select' className='text-sm font-medium text-gray-700'>
+            Año:
+          </label>
+          <select
+            id='year-select'
+            value={selectedYear}
+            onChange={(e) => setSelectedYear(Number(e.target.value))}
+            className='rounded-md border-2 border-gray-400 bg-gray-50 px-3 py-2 text-sm font-medium text-gray-900 focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500'
+          >
+            {availableYears.map((year) => (
+              <option key={year} value={year}>
+                {year}
+              </option>
+            ))}
+          </select>
+        </div>
+      </div>
+
+      {/* Validación de datos filtrados */}
+      {filteredData.length === 0 ? (
+        <div className='bg-yellow-50 border-2 border-yellow-200 rounded-lg p-6 text-center'>
+          <h2 className='text-yellow-800 font-bold text-lg mb-2'>Sin Datos</h2>
+          <p className='text-yellow-600'>No se encontraron datos para el año {selectedYear}</p>
+        </div>
+      ) : (
+        <>
+          <DiasCoboPagoChart data={filteredData} />
 
       {/* Información adicional */}
       <div className='mt-6 grid grid-cols-1 md:grid-cols-2 gap-4'>
@@ -253,6 +295,8 @@ export default function DiasCobroPagoPage() {
           Para mayor precisión, se recomienda usar el Estado de Resultados completo cuando esté disponible.
         </p>
       </div>
+        </>
+      )}
     </div>
   )
 }

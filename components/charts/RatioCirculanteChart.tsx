@@ -22,7 +22,7 @@ export function CurrentRatioChart({ data }: CurrentRatioChartProps) {
       'Enero', 'Febrero', 'Marzo', 'Abril', 'Mayo', 'Junio',
       'Julio', 'Agosto', 'Septiembre', 'Octubre', 'Noviembre', 'Diciembre'
     ]
-    return `${months[month - 1]} ${year}`
+    return `${months[month - 1]} `
   }
 
   const formatCurrency = (value: number): string => {

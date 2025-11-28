@@ -1,5 +1,6 @@
 'use client'
 
+import { useEffect } from 'react'
 import { Line, LineChart, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, ReferenceLine } from 'recharts'
 import { Card } from '@/components/ui/Card'
 
@@ -22,8 +23,8 @@ interface RoiChartProps {
 export function RoiChart({ data, onHover }: RoiChartProps) {
   const formatSpanishDate = (dateString: string): string => {
     const [year, month] = dateString.split('-').map(Number)
-    const months = ['Ene', 'Feb', 'Mar', 'Abr', 'May', 'Jun', 'Jul', 'Ago', 'Sep', 'Oct', 'Nov', 'Dic']
-    return `${months[month - 1]} ${year}`
+    const months = ['Enero', 'Febrero', 'Marzo', 'Abril', 'Mayo', 'Junio', 'Julio', 'Agosto', 'Septiembre', 'Octubre', 'Noviembre', 'Diciembre']
+    return `${months[month - 1]} `
   }
 
   const formatCurrency = (value: number): string => {
@@ -42,6 +43,15 @@ export function RoiChart({ data, onHover }: RoiChartProps) {
   }))
 
   const CustomTooltip = ({ active, payload }: any) => {
+    useEffect(() => {
+      if (active && payload && payload.length > 0) {
+        const dataPoint = data.find(d => d.date === payload[0].payload.date)
+        if (dataPoint && onHover) {
+          onHover(dataPoint)
+        }
+      }
+    }, [active, payload])
+
     if (active && payload && payload.length) {
       const data = payload[0].payload
       return (
@@ -54,7 +64,7 @@ export function RoiChart({ data, onHover }: RoiChartProps) {
             </p>
             <p className='text-sm'>
               <span className='text-gray-600'>Utilidad Neta: </span>
-              <span className='font-semibold text-gray-900'>{formatCurrency(data.utilidadNeta)}</span>
+              <span className='font-semibold text-blue-600'>{formatCurrency(data.utilidadNeta)}</span>
             </p>
             <p className='text-sm'>
               <span className='text-gray-600'>Patrimonio: </span>
@@ -69,19 +79,11 @@ export function RoiChart({ data, onHover }: RoiChartProps) {
 
   return (
     <Card title='Evolución del ROI (ROE)'>
-      <div className='h-80'>
+      <div className='h-96'>
         <ResponsiveContainer width='100%' height='100%'>
           <LineChart
             data={chartData}
             margin={{ top: 5, right: 30, left: 20, bottom: 5 }}
-            onMouseMove={(e: any) => {
-              if (e && e.activePayload && e.activePayload.length > 0) {
-                const hoveredData = data.find(d => d.date === e.activePayload[0].payload.date)
-                if (hoveredData && onHover) {
-                  onHover(hoveredData)
-                }
-              }
-            }}
             onMouseLeave={() => {
               if (onHover) {
                 onHover(null)
@@ -101,9 +103,6 @@ export function RoiChart({ data, onHover }: RoiChartProps) {
               label={{ value: 'ROI (%)', angle: -90, position: 'insideLeft' }}
             />
             <Tooltip content={<CustomTooltip />} />
-            <ReferenceLine y={15} stroke='#10b981' strokeDasharray='3 3' label='Excelente (15%)' />
-            <ReferenceLine y={10} stroke='#3b82f6' strokeDasharray='3 3' label='Bueno (10%)' />
-            <ReferenceLine y={5} stroke='#f59e0b' strokeDasharray='3 3' label='Regular (5%)' />
             <Line
               type='monotone'
               dataKey='roi'
