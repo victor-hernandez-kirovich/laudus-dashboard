@@ -25,7 +25,7 @@ export function cn(...classes: (string | undefined | null | false)[]): string {
 
 /**
  * Normaliza los datos de balance de Laudus API a formato consistente
- * Maneja las diferencias entre totals, standard y 8Columns
+ * Maneja el formato de Balance 8 Columns
  */
 export function normalizeBalanceData(item: any): any {
   if (!item) return item;

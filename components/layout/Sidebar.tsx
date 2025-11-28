@@ -21,8 +21,6 @@ import {
 
 const navigation = [
   { name: 'Dashboard', href: '/', icon: LayoutDashboard },
-  { name: 'Balance Totals', href: '/dashboard/totals', icon: TrendingUp },
-  { name: 'Balance Standard', href: '/dashboard/standard', icon: FileText },
   { name: 'Balance 8 Columns', href: '/dashboard/8columns', icon: Table2 },
   { name: 'Balance General', href: '/dashboard/balance-general', icon: LayoutGrid },
   { name: 'Facturas Mensuales', href: '/dashboard/invoices', icon: Receipt },

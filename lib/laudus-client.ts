@@ -20,16 +20,6 @@ export interface LaudusEndpoint {
 
 export const LAUDUS_ENDPOINTS: LaudusEndpoint[] = [
   {
-    name: 'totals',
-    path: '/accounting/balanceSheet/totals',
-    collection: 'balance_totals'
-  },
-  {
-    name: 'standard',
-    path: '/accounting/balanceSheet/standard',
-    collection: 'balance_standard'
-  },
-  {
     name: '8Columns',
     path: '/accounting/balanceSheet/8Columns',
     collection: 'balance_8columns'

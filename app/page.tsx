@@ -9,7 +9,7 @@ async function getHealthStatus() {
     const db = await getDatabase()
     
     // Obtener datos de las 3 colecciones (último automático y manual de cada una)
-    const collections = ['balance_totals', 'balance_standard', 'balance_8columns']
+    const collections = ['balance_8columns']
     
     const results = await Promise.all(
       collections.map(async (collectionName) => {
