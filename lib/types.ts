@@ -100,6 +100,12 @@ export interface EERRLine {
   }[];
   type: 'income' | 'expense' | 'calculated';
   level?: number; // 1 for subtotals, 2 for final result
+  verticalAnalysis?: number; // % of Ingresos Operacionales
+  horizontalAnalysis?: {
+    variationAbsolute: number;
+    variationPercentage: number;
+    comparisonMonth: string | null;
+  };
 }
 
 export interface EERRData {

@@ -261,7 +261,7 @@ export default function EERRPage() {
                                 </td>
                                 {months.map(month => {
                                     const line = yearData[month].lines[lineKey]
-                                    const percentage = line.verticalAnalysis
+                                    const percentage = line.verticalAnalysis ?? 0
                                     const isNegative = percentage < 0
 
                                     return (
