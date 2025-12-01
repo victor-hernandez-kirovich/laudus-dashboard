@@ -165,7 +165,7 @@ export default function EERRPage() {
                         <select
                             value={selectedYear}
                             onChange={(e) => setSelectedYear(e.target.value)}
-                            className='px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 bg-white'
+                            className='px-4 py-2 border border-gray-300 text-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 bg-white'
                         >
                             {availableYears.map(year => (
                                 <option key={year} value={year}>{year}</option>
@@ -189,14 +189,14 @@ export default function EERRPage() {
                             onMouseUp={handleMouseUpOrLeave}
                             onMouseLeave={handleMouseUpOrLeave}
                         >
-                            <table className='w-full border-collapse text-sm select-none'>
-                                <thead className='sticky top-0 bg-gray-100 z-10'>
+                            <table className='w-full border-collapse text-sm text-gray-800 select-none'>
+                                <thead className='sticky top-0 bg-gray-00 z-10'>
                                     <tr>
-                                        <th className='border border-gray-300 px-4 py-3 text-left font-semibold bg-gray-100 sticky left-0 z-20'>
+                                        <th className='border border-gray-300 text-gray-800 px-4 py-3 text-left font-semibold bg-gray-100 sticky left-0 z-20'>
                                             Línea del Estado
                                         </th>
                                         {months.map(month => (
-                                            <th key={month} className='border border-gray-300 px-4 py-3 text-right font-semibold bg-gray-100 min-w-[140px]'>
+                                            <th key={month} className='border border-gray-300 text-gray-800 px-4 py-3 text-center font-semibold bg-gray-100 min-w-[140px]'>
                                                 {MONTH_NAMES[parseInt(month) - 1]}
                                             </th>
                                         ))}
@@ -257,7 +257,7 @@ export default function EERRPage() {
 
                         return (
                             <Card key={month}>
-                                <div className='space-y-3'>
+                                <div className='space-y-3 bg-gray-50 p-4 rounded-lg'>
                                     <div className='flex items-center justify-between'>
                                         <h3 className='text-lg font-semibold text-gray-700'>
                                             {MONTH_NAMES[parseInt(month) - 1]}
@@ -272,15 +272,15 @@ export default function EERRPage() {
                                     <div className='space-y-2 text-sm'>
                                         <div className='flex justify-between'>
                                             <span className='text-gray-600'>Ingresos Op.:</span>
-                                            <span className='font-medium'>{formatCurrency(data.summary.ingresosOperacionales)}</span>
+                                            <span className='font-medium text-gray-800'>{formatCurrency(data.summary.ingresosOperacionales)}</span>
                                         </div>
                                         <div className='flex justify-between'>
                                             <span className='text-gray-600'>Margen Bruto:</span>
-                                            <span className='font-medium'>{formatCurrency(data.summary.margenBruto)}</span>
+                                            <span className='font-medium text-gray-800'>{formatCurrency(data.summary.margenBruto)}</span>
                                         </div>
                                         <div className='flex justify-between'>
                                             <span className='text-gray-600'>% Margen Bruto:</span>
-                                            <span className='font-medium'>{data.summary.margenBrutoPercentage.toFixed(1)}%</span>
+                                            <span className='font-medium text-gray-800'>{data.summary.margenBrutoPercentage.toFixed(1)}%</span>
                                         </div>
                                         <div className='flex justify-between pt-2 border-t border-gray-200'>
                                             <span className='text-gray-700 font-semibold'>Resultado Final:</span>
