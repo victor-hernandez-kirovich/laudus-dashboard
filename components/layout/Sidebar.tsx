@@ -23,6 +23,7 @@ const navigation = [
   { name: 'Dashboard', href: '/', icon: LayoutDashboard },
   { name: 'Balance 8 Columns', href: '/dashboard/8columns', icon: Table2 },
   { name: 'Balance General', href: '/dashboard/balance-general', icon: LayoutGrid },
+  { name: 'Estado de Resultados (EERR)', href: '/dashboard/eerr', icon: FileText },
   { name: 'Facturas Mensuales', href: '/dashboard/invoices', icon: Receipt },
   { name: 'Facturas por Sucursal', href: '/dashboard/invoices/branch', icon: Building2 },
   { name: 'Facturas por Vendedor', href: '/dashboard/invoices/salesman', icon: Users },

@@ -88,3 +88,58 @@ export interface LoadDataJobStatusResponse {
   job?: LoadDataJobStatus;
   error?: string;
 }
+
+export interface EERRLine {
+  label: string;
+  code?: string;
+  amount: number;
+  details?: {
+    accountCode: string;
+    accountName: string;
+    amount: number;
+  }[];
+  type: 'income' | 'expense' | 'calculated';
+  level?: number; // 1 for subtotals, 2 for final result
+}
+
+export interface EERRData {
+  lines: {
+    ingresosOperacionales: EERRLine;
+    costoVentas: EERRLine;
+    margenBruto: EERRLine;
+    gastosAdmin: EERRLine;
+    depreciacion: EERRLine;
+    resultadoOperacional: EERRLine;
+    ingresosNoOperacionales: EERRLine;
+    gastosNoOperacionales: EERRLine;
+    correccionMonetaria: EERRLine;
+    resultadoAntesImpuestos: EERRLine;
+    impuestoRenta: EERRLine;
+    utilidadPerdida: EERRLine;
+  };
+  summary: {
+    ingresosOperacionales: number;
+    costoVentas: number;
+    margenBruto: number;
+    margenBrutoPercentage: number;
+    gastosAdmin: number;
+    depreciacion: number;
+    resultadoOperacional: number;
+    ingresosNoOperacionales: number;
+    gastosNoOperacionales: number;
+    correccionMonetaria: number;
+    resultadoAntesImpuestos: number;
+    impuestoRenta: number;
+    utilidadPerdida: number;
+    margenNetoPercentage: number;
+  };
+}
+
+export interface EERRResponse {
+  success: boolean;
+  data?: { [month: string]: EERRData };
+  year?: string;
+  availableYears?: string[];
+  monthsAvailable?: string[];
+  error?: string;
+}
