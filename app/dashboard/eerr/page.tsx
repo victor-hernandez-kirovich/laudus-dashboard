@@ -52,7 +52,7 @@ export default function EERRPage() {
     useEffect(() => {
         async function fetchAvailableYears() {
             try {
-                const res = await fetch('/api/data/8columns?limit=1')
+                const res = await fetch('/api/data/balance-general')
                 if (!res.ok) throw new Error('Error al cargar años disponibles')
                 const result = await res.json()
 
