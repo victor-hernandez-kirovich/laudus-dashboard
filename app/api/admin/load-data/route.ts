@@ -215,26 +215,7 @@ export async function POST(request: NextRequest) {
       return response
     }
 
-    // Map endpoint names to GitHub Actions format
-    const endpointMap: { [key: string]: string } = {
-      'totals': 'totals',
-      'standard': 'standard',
-      '8Columns': '8columns'
-    }
-
-    const githubEndpoints = endpoints
-      .map(ep => endpointMap[ep])
-      .filter(Boolean)
-      .join(',')
-
-    if (!githubEndpoints) {
-      return NextResponse.json(
-        { success: false, error: 'No valid endpoints specified' },
-        { status: 400 }
-      )
-    }
-
-    // Disparar GitHub Actions workflow
+    // Disparar GitHub Actions workflow (solo necesita date, el workflow está hardcodeado a 8Columns)
     const workflowResponse = await fetch(
       'https://api.github.com/repos/victor-hernandez-kirovich/laudus-api/actions/workflows/laudus-manual.yml/dispatches',
       {
@@ -248,8 +229,7 @@ export async function POST(request: NextRequest) {
         body: JSON.stringify({
           ref: 'main',
           inputs: {
-            date: date,
-            endpoints: githubEndpoints
+            date: date
           }
         })
       }
