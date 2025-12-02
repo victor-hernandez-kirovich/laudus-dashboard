@@ -162,9 +162,9 @@ export default function EERRPage() {
             onMouseLeave={handleMouseUpOrLeave}
         >
             <table className='w-full border-collapse text-sm select-none'>
-                <thead className='sticky top-0 bg-gray-100 z-10'>
+                <thead className='sticky top-0 bg-gray-100 z-30'>
                     <tr>
-                        <th className='border border-gray-300 px-4 py-3 text-gray-900 text-left font-semibold bg-blue-50 sticky left-0 z-20'>
+                        <th className='border border-gray-300 px-4 py-3 text-gray-900 text-left font-semibold bg-blue-50 sticky left-0 z-40'>
                             Línea del Estado
                         </th>
                         {months.map(month => (
@@ -226,9 +226,9 @@ export default function EERRPage() {
             onMouseLeave={handleMouseUpOrLeave}
         >
             <table className='w-full border-collapse text-sm select-none'>
-                <thead className='sticky top-0 bg-gray-100 z-10'>
+                <thead className='sticky top-0 bg-gray-100 z-30'>
                     <tr>
-                        <th className='border border-gray-300 text-gray-900 px-4 py-3 text-left font-semibold bg-blue-50 sticky left-0 z-20' rowSpan={2}>
+                        <th className='border border-gray-300 text-gray-900 px-4 py-3 text-left font-semibold bg-blue-50 sticky left-0 z-40' rowSpan={2}>
                             Línea del Estado
                         </th>
                         {months.map(month => (
@@ -308,9 +308,9 @@ export default function EERRPage() {
             onMouseLeave={handleMouseUpOrLeave}
         >
             <table className='w-full border-collapse text-sm select-none'>
-                <thead className='sticky top-0 bg-gray-100 z-10'>
+                <thead className='sticky top-0 bg-gray-100 z-30'>
                     <tr>
-                        <th className='border border-gray-300 text-gray-900 px-4 py-3 text-left font-semibold bg-blue-50 sticky left-0 z-20' rowSpan={2}>
+                        <th className='border border-gray-300 text-gray-900 px-4 py-3 text-left font-semibold bg-blue-50 sticky left-0 z-40' rowSpan={2}>
                             Línea del Estado
                         </th>
                         {months.slice(1).map((month, index) => {
