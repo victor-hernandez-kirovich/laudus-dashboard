@@ -164,11 +164,11 @@ export default function EERRPage() {
             <table className='w-full border-collapse text-sm select-none'>
                 <thead className='sticky top-0 bg-gray-100 z-10'>
                     <tr>
-                        <th className='border border-gray-300 px-4 py-3 text-gray-900 text-left font-semibold bg-gray-100 sticky left-0 z-20'>
+                        <th className='border border-gray-300 px-4 py-3 text-gray-900 text-left font-semibold bg-blue-50 sticky left-0 z-20'>
                             Línea del Estado
                         </th>
                         {months.map(month => (
-                            <th key={month} className='border border-gray-300 text-gray-900 px-4 py-3 text-center font-semibold bg-gray-100 min-w-[140px]'>
+                            <th key={month} className='border border-gray-300 text-gray-900 px-4 py-3 text-center font-semibold bg-blue-50 min-w-[140px]'>
                                 {MONTH_NAMES[parseInt(month) - 1]}
                             </th>
                         ))}
@@ -183,15 +183,15 @@ export default function EERRPage() {
 
                         return (
                             <tr key={lineKey} className={
-                                isFinalResult ? 'bg-blue-50 font-bold' :
-                                isSubtotal ? 'bg-gray-50 font-semibold' :
-                                isCalculated ? 'bg-gray-50' :
+                                isFinalResult ? 'bg-gray-50 font-bold' :
+                                isSubtotal ? 'bg-green-50 font-semibold' :
+                                isCalculated ? 'bg-green-50' :
                                 'hover:bg-gray-50'
                             }>
-                                <td className={`border border-gray-300 text-gray-900 px-4 py-2 sticky left-0 bg-white ${
-                                    isFinalResult ? 'bg-blue-50 font-bold' :
-                                    isSubtotal ? 'bg-gray-50 font-semibold' :
-                                    isCalculated ? 'bg-gray-50' : ''
+                                <td className={`border border-gray-300 text-gray-900 px-4 py-2 sticky left-0 z-[15] ${
+                                    isFinalResult ? 'bg-green-50 font-bold' :
+                                    isSubtotal ? 'bg-green-50 font-semibold' :
+                                    isCalculated ? 'bg-green-50' : 'bg-white'
                                 } ${isFinalResult || isSubtotal ? 'text-base' : ''}`}>
                                     {firstMonthLine.label}
                                 </td>
@@ -202,7 +202,7 @@ export default function EERRPage() {
 
                                     return (
                                         <td key={month} className={`border border-gray-300 px-4 py-2 text-right tabular-nums ${
-                                            isNegative ? 'text-red-600' : 'text-gray-900'
+                                            isNegative ? 'text-red-600' : 'text-gray-900 '
                                         } ${isFinalResult || isSubtotal ? 'font-semibold' : ''}`}>
                                             {formatCurrency(amount)}
                                         </td>
@@ -228,13 +228,25 @@ export default function EERRPage() {
             <table className='w-full border-collapse text-sm select-none'>
                 <thead className='sticky top-0 bg-gray-100 z-10'>
                     <tr>
-                        <th className='border border-gray-300 text-gray-900 px-4 py-3 text-left font-semibold bg-gray-100 sticky left-0 z-20'>
+                        <th className='border border-gray-300 text-gray-900 px-4 py-3 text-left font-semibold bg-blue-50 sticky left-0 z-20' rowSpan={2}>
                             Línea del Estado
                         </th>
                         {months.map(month => (
-                            <th key={month} className='border border-gray-300 text-gray-900 px-4 py-3 text-right font-semibold bg-gray-100 min-w-[120px]'>
+                            <th key={month} colSpan={2} className='border border-gray-300 text-gray-900 px-2 py-2 text-center font-semibold bg-blue-50'>
                                 {MONTH_NAMES[parseInt(month) - 1]}
                             </th>
+                        ))}
+                    </tr>
+                    <tr>
+                        {months.map(month => (
+                            <React.Fragment key={month}>
+                                <th className='border border-gray-300 px-2 py-1 text-center text-gray-900 text-xs font-medium bg-blue-50 min-w-[120px]'>
+                                    Valor
+                                </th>
+                                <th className='border border-gray-300 px-2 py-1 text-center text-gray-900 text-xs font-medium bg-blue-50 min-w-[80px]'>
+                                    %
+                                </th>
+                            </React.Fragment>
                         ))}
                     </tr>
                 </thead>
@@ -247,30 +259,35 @@ export default function EERRPage() {
 
                         return (
                             <tr key={lineKey} className={
-                                isFinalResult ? 'bg-blue-50 font-bold' :
-                                isSubtotal ? 'bg-gray-50 font-semibold' :
-                                isCalculated ? 'bg-gray-50' :
-                                'hover:bg-gray-50'
+                                isFinalResult ? 'group bg-green-50 font-bold' :
+                                isSubtotal ? 'group bg-green-50 font-semibold' :
+                                isCalculated ? 'group bg-gray-50' :
+                                'group hover:bg-gray-50'
                             }>
-                                <td className={`border border-gray-300 text-gray-900 px-4 py-2 sticky left-0 bg-white ${
-                                    isFinalResult ? 'bg-blue-50 font-bold' :
-                                    isSubtotal ? 'bg-gray-50 font-semibold' :
-                                    isCalculated ? 'bg-gray-50' : ''
+                                <td className={`border border-gray-300 text-gray-900 px-4 py-2 sticky left-0 z-[15] ${
+                                    isFinalResult ? 'bg-green-50 group-hover:bg-green-50 font-bold' :
+                                    isSubtotal ? 'bg-green-50 group-hover:bg-green-50 font-semibold' :
+                                    isCalculated ? 'bg-gray-50 group-hover:bg-gray-50' : 'bg-white group-hover:bg-gray-50'
                                 } ${isFinalResult || isSubtotal ? 'text-base' : ''}`}>
                                     {firstMonthLine.label}
                                 </td>
                                 {months.map(month => {
                                     const line = yearData[month].lines[lineKey]
+                                    const amount = line.amount
                                     const percentage = line.verticalAnalysis ?? 0
                                     const isNegative = percentage < 0
 
                                     return (
-                                        <td key={month} className={`border border-gray-300 px-4 py-2 text-right tabular-nums ${
-                                            isNegative ? 'text-red-600' : 'text-gray-900'
-                                        } ${isFinalResult || isSubtotal ? 'font-semibold' : ''}`}
-                                        title={`${formatCurrency(line.amount)}`}>
-                                            {percentage.toFixed(1)}%
-                                        </td>
+                                        <React.Fragment key={month}>
+                                            <td className='border border-gray-300 px-2 py-2 text-right tabular-nums text-gray-900'>
+                                                {formatCurrency(amount)}
+                                            </td>
+                                            <td className={`border border-gray-300 px-2 py-2 text-right tabular-nums ${
+                                                isNegative ? 'text-red-600' : 'text-blue-700'
+                                            } ${isFinalResult || isSubtotal ? 'font-semibold' : 'font-medium'}`}>
+                                                {percentage.toFixed(1)}%
+                                            </td>
+                                        </React.Fragment>
                                     )
                                 })}
                             </tr>
@@ -293,7 +310,7 @@ export default function EERRPage() {
             <table className='w-full border-collapse text-sm select-none'>
                 <thead className='sticky top-0 bg-gray-100 z-10'>
                     <tr>
-                        <th className='border border-gray-300 text-gray-900 px-4 py-3 text-left font-semibold bg-gray-100 sticky left-0 z-20' rowSpan={2}>
+                        <th className='border border-gray-300 text-gray-900 px-4 py-3 text-left font-semibold bg-blue-50 sticky left-0 z-20' rowSpan={2}>
                             Línea del Estado
                         </th>
                         {months.slice(1).map((month, index) => {
@@ -302,7 +319,7 @@ export default function EERRPage() {
                             const prevMonthName = MONTH_NAMES[parseInt(previousMonth) - 1]
                             const currMonthName = MONTH_NAMES[parseInt(currentMonth) - 1]
                             return (
-                                <th key={month} colSpan={4} className='border border-gray-300 text-gray-900 px-2 py-2 text-center font-semibold bg-gray-100'>
+                                <th key={month} colSpan={4} className='border border-gray-300 text-gray-900 px-2 py-2 text-center font-semibold bg-blue-50'>
                                     {prevMonthName.toUpperCase()} → {currMonthName.toUpperCase()}
                                 </th>
                             )
@@ -311,16 +328,16 @@ export default function EERRPage() {
                     <tr>
                         {months.slice(1).map(month => (
                             <React.Fragment key={month}>
-                                <th className='border border-gray-300 px-2 py-1 text-center text-gray-900 text-xs font-medium bg-gray-50 min-w-[100px]'>
+                                <th className='border border-gray-300 px-2 py-1 text-center text-gray-900 text-xs font-medium bg-blue-50 min-w-[100px]'>
                                     Anterior
                                 </th>
-                                <th className='border border-gray-300 px-2 py-1 text-center text-gray-900 text-xs font-medium bg-gray-50 min-w-[100px]'>
+                                <th className='border border-gray-300 px-2 py-1 text-center text-gray-900 text-xs font-medium bg-blue-50 min-w-[100px]'>
                                     Actual
                                 </th>
-                                <th className='border border-gray-300 px-2 py-1 text-center text-gray-900 text-xs font-medium bg-gray-50 min-w-[90px]'>
+                                <th className='border border-gray-300 px-2 py-1 text-center text-gray-900 text-xs font-medium bg-blue-50 min-w-[90px]'>
                                     Var $
                                 </th>
-                                <th className='border border-gray-300 px-2 py-1 text-center text-gray-900 text-xs font-medium bg-gray-50 min-w-[80px]'>
+                                <th className='border border-gray-300 px-2 py-1 text-center text-gray-900 text-xs font-medium bg-blue-50 min-w-[80px]'>
                                     Var %
                                 </th>
                             </React.Fragment>
@@ -337,15 +354,15 @@ export default function EERRPage() {
 
                         return (
                             <tr key={lineKey} className={
-                                isFinalResult ? 'bg-blue-50 font-bold' :
-                                isSubtotal ? 'bg-gray-50 font-semibold' :
-                                isCalculated ? 'bg-gray-50' :
-                                'hover:bg-gray-50'
+                                isFinalResult ? 'group bg-green-50 font-bold' :
+                                isSubtotal ? 'group bg-green-50 font-semibold' :
+                                isCalculated ? 'group bg-green-50' :
+                                'group hover:bg-gray-50'
                             }>
-                                <td className={`border border-gray-300 text-gray-900 px-4 py-2 sticky left-0 bg-white ${
-                                    isFinalResult ? 'bg-blue-50 font-bold' :
-                                    isSubtotal ? 'bg-gray-50 font-semibold' :
-                                    isCalculated ? 'bg-gray-50' : ''
+                                <td className={`border border-gray-300 text-gray-900 px-4 py-2 sticky left-0 z-[15] ${
+                                    isFinalResult ? 'bg-green-50 group-hover:bg-green-50 font-bold' :
+                                    isSubtotal ? 'bg-green-50 group-hover:bg-green-50 font-semibold' :
+                                    isCalculated ? 'bg-green-50 group-hover:bg-green-50' : 'bg-white group-hover:bg-gray-50'
                                 } ${isFinalResult || isSubtotal ? 'text-base' : ''}`}>
                                     {firstMonthLine.label}
                                 </td>
@@ -369,7 +386,7 @@ export default function EERRPage() {
                                     const isBadChange = isExpense ? isIncrease : isDecrease
                                     
                                     const varColor = Math.abs(varPct) < 2 ? 'text-gray-600' :
-                                                    isGoodChange ? 'text-green-600' :
+                                                    isGoodChange ? 'text-blue-600' :
                                                     isBadChange ? 'text-red-600' : 'text-gray-600'
                                     
                                     const TrendIcon = Math.abs(varPct) < 2 ? Minus :
