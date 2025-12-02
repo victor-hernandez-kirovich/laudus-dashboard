@@ -183,15 +183,15 @@ export default function EERRPage() {
 
                         return (
                             <tr key={lineKey} className={
-                                isFinalResult ? 'bg-gray-50 font-bold' :
-                                isSubtotal ? 'bg-green-50 font-semibold' :
-                                isCalculated ? 'bg-green-50' :
-                                'hover:bg-gray-50'
+                                isFinalResult ? 'group bg-green-50 font-bold' :
+                                isSubtotal ? 'group bg-green-50 font-semibold' :
+                                isCalculated ? 'group bg-green-50' :
+                                'group hover:bg-gray-50'
                             }>
                                 <td className={`border border-gray-300 text-gray-900 px-4 py-2 sticky left-0 z-[15] ${
                                     isFinalResult ? 'bg-green-50 font-bold' :
                                     isSubtotal ? 'bg-green-50 font-semibold' :
-                                    isCalculated ? 'bg-green-50' : 'bg-white'
+                                    isCalculated ? 'bg-green-50' : 'bg-white group-hover:bg-gray-50'
                                 } ${isFinalResult || isSubtotal ? 'text-base' : ''}`}>
                                     {firstMonthLine.label}
                                 </td>
