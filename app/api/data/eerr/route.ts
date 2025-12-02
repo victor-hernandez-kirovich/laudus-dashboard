@@ -68,6 +68,11 @@ function processEERR(sourceData: any[]): any {
     const impuestoRenta = accounts['36'].amount;
     const utilidadPerdida = resultadoAntesImpuestos - impuestoRenta;
 
+    // Helper function to calculate vertical analysis (% of Ingresos Operacionales)
+    const calcVertical = (amount: number) => {
+        return ingresosOperacionales > 0 ? (amount / ingresosOperacionales) * 100 : 0;
+    };
+
     return {
         lines: {
             ingresosOperacionales: {
@@ -75,80 +80,92 @@ function processEERR(sourceData: any[]): any {
                 code: '41',
                 amount: ingresosOperacionales,
                 details: accounts['41'].details,
-                type: 'income'
+                type: 'income',
+                verticalAnalysis: 100 // Base: always 100%
             },
             costoVentas: {
                 label: '(-) Costo de Ventas',
                 code: '31',
                 amount: costoVentas,
                 details: accounts['31'].details,
-                type: 'expense'
+                type: 'expense',
+                verticalAnalysis: calcVertical(costoVentas)
             },
             margenBruto: {
                 label: 'MARGEN BRUTO',
                 amount: margenBruto,
                 type: 'calculated',
-                level: 1
+                level: 1,
+                verticalAnalysis: calcVertical(margenBruto)
             },
             gastosAdmin: {
                 label: '(-) Gastos de Administración y Ventas',
                 code: '32',
                 amount: gastosAdmin,
                 details: accounts['32'].details,
-                type: 'expense'
+                type: 'expense',
+                verticalAnalysis: calcVertical(gastosAdmin)
             },
             depreciacion: {
                 label: '(-) Depreciación',
                 code: '33',
                 amount: depreciacion,
                 details: accounts['33'].details,
-                type: 'expense'
+                type: 'expense',
+                verticalAnalysis: calcVertical(depreciacion)
             },
             resultadoOperacional: {
                 label: 'RESULTADO OPERACIONAL',
                 amount: resultadoOperacional,
                 type: 'calculated',
-                level: 1
+                level: 1,
+                verticalAnalysis: calcVertical(resultadoOperacional)
             },
             ingresosNoOperacionales: {
                 label: '(+) Ingresos No Operacionales',
                 code: '42',
                 amount: ingresosNoOperacionales,
                 details: accounts['42'].details,
-                type: 'income'
+                type: 'income',
+                verticalAnalysis: calcVertical(ingresosNoOperacionales)
             },
             gastosNoOperacionales: {
                 label: '(-) Gastos No Operacionales',
                 code: '34',
                 amount: gastosNoOperacionales,
                 details: accounts['34'].details,
-                type: 'expense'
+                type: 'expense',
+                verticalAnalysis: calcVertical(gastosNoOperacionales)
             },
             correccionMonetaria: {
                 label: '(-) Corrección Monetaria',
                 code: '35',
                 amount: correccionMonetaria,
                 details: accounts['35'].details,
-                type: 'expense'
+                type: 'expense',
+                verticalAnalysis: calcVertical(correccionMonetaria)
             },
             resultadoAntesImpuestos: {
                 label: 'RESULTADO ANTES DE IMPUESTOS',
                 amount: resultadoAntesImpuestos,
                 type: 'calculated',
-                level: 1
+                level: 1,
+                verticalAnalysis: calcVertical(resultadoAntesImpuestos)
             },
             impuestoRenta: {
                 label: '(-) Impuesto a la Renta',
                 code: '36',
                 amount: impuestoRenta,
                 details: accounts['36'].details,
-                type: 'expense'
+                type: 'expense',
+                verticalAnalysis: calcVertical(impuestoRenta)
             },
             utilidadPerdida: {
                 label: 'UTILIDAD/PÉRDIDA DEL EJERCICIO',
                 amount: utilidadPerdida,
                 type: 'calculated',
-                level: 2
+                level: 2,
+                verticalAnalysis: calcVertical(utilidadPerdida)
             }
         },
         summary: {
@@ -201,12 +218,55 @@ export async function GET(request: Request) {
 
             // Process data by month
             const monthlyData: { [key: string]: any } = {};
+            const sortedMonths: string[] = [];
 
             for (const doc of yearDocs) {
                 const month = doc.date.substring(5, 7); // Extract MM from YYYY-MM-DD
                 const sourceData = doc.data || [];
                 const eerr = processEERR(sourceData);
                 monthlyData[month] = eerr;
+                sortedMonths.push(month);
+            }
+
+            // Add horizontal analysis (month-to-month comparison)
+            const lineKeys = [
+                'ingresosOperacionales', 'costoVentas', 'margenBruto',
+                'gastosAdmin', 'depreciacion', 'resultadoOperacional',
+                'ingresosNoOperacionales', 'gastosNoOperacionales', 'correccionMonetaria',
+                'resultadoAntesImpuestos', 'impuestoRenta', 'utilidadPerdida'
+            ];
+
+            for (let i = 0; i < sortedMonths.length; i++) {
+                const currentMonth = sortedMonths[i];
+                const previousMonth = i > 0 ? sortedMonths[i - 1] : null;
+
+                for (const lineKey of lineKeys) {
+                    const currentLine = monthlyData[currentMonth].lines[lineKey];
+                    
+                    if (previousMonth) {
+                        const previousLine = monthlyData[previousMonth].lines[lineKey];
+                        const currentAmount = currentLine.amount;
+                        const previousAmount = previousLine.amount;
+                        
+                        const variationAbsolute = currentAmount - previousAmount;
+                        const variationPercentage = previousAmount !== 0 
+                            ? (variationAbsolute / Math.abs(previousAmount)) * 100 
+                            : (currentAmount !== 0 ? 100 : 0);
+
+                        currentLine.horizontalAnalysis = {
+                            variationAbsolute,
+                            variationPercentage,
+                            comparisonMonth: previousMonth
+                        };
+                    } else {
+                        // First month has no comparison
+                        currentLine.horizontalAnalysis = {
+                            variationAbsolute: 0,
+                            variationPercentage: 0,
+                            comparisonMonth: null
+                        };
+                    }
+                }
             }
 
             // Get available years
@@ -218,7 +278,7 @@ export async function GET(request: Request) {
                 data: monthlyData,
                 year: requestedYear,
                 availableYears,
-                monthsAvailable: Object.keys(monthlyData).sort()
+                monthsAvailable: sortedMonths
             });
         }
 
