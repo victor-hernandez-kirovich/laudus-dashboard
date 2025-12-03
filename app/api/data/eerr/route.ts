@@ -4,8 +4,9 @@ import { getDatabase } from '@/lib/mongodb';
 /**
  * Process 8-Columns Balance data into EERR (Estado de Resultados)
  * Uses Bal.Acree for incomes (code 4x) and Bal.Deud for expenses (code 3x)
+ * Calculates period amounts by subtracting previous month from current month (since data is cumulative)
  */
-function processEERR(sourceData: any[]): any {
+function processEERR(sourceData: any[], previousMonthData: any[] | null = null): any {
     // Initialize accumulators for each account type
     const accounts: { [key: string]: { name: string, amount: number, details: any[] } } = {
         '41': { name: 'Ingresos Operacionales', amount: 0, details: [] },
@@ -30,15 +31,31 @@ function processEERR(sourceData: any[]): any {
 
         // For incomes (4x): use Bal.Acree (credit balance)
         // For expenses (3x): use Bal.Deud (debit balance)
+        // NOTE: Laudus data is CUMULATIVE from year start, so we need to subtract previous month
         const firstDigit = accountCode.charAt(0);
-        let amount = 0;
-
+        
+        // Get current month accumulated value
+        let currentAmount = 0;
         if (firstDigit === '4') {
-            // Income accounts - use credit balance
-            amount = parseFloat(account.incomes || 0);
+            // Income accounts - use credit balance (accumulated)
+            currentAmount = parseFloat(account.incomes || 0);
         } else if (firstDigit === '3') {
-            // Expense accounts - use debit balance
-            amount = parseFloat(account.expenses || 0);
+            // Expense accounts - use debit balance (accumulated)
+            currentAmount = parseFloat(account.expenses || 0);
+        }
+
+        // Calculate period amount (current - previous)
+        let amount = currentAmount;
+        if (previousMonthData) {
+            const previousAccount = previousMonthData.find(
+                (acc: any) => acc.accountNumber === account.accountNumber
+            );
+            if (previousAccount) {
+                const previousAmount = firstDigit === '4'
+                    ? parseFloat(previousAccount.incomes || 0)
+                    : parseFloat(previousAccount.expenses || 0);
+                amount = currentAmount - previousAmount;
+            }
         }
 
         if (amount > 0) {
@@ -220,10 +237,16 @@ export async function GET(request: Request) {
             const monthlyData: { [key: string]: any } = {};
             const sortedMonths: string[] = [];
 
-            for (const doc of yearDocs) {
+            for (let i = 0; i < yearDocs.length; i++) {
+                const doc = yearDocs[i];
                 const month = doc.date.substring(5, 7); // Extract MM from YYYY-MM-DD
                 const sourceData = doc.data || [];
-                const eerr = processEERR(sourceData);
+                
+                // Get previous month data for calculating period amounts (data is cumulative)
+                const previousMonthData = i > 0 ? (yearDocs[i - 1].data || []) : null;
+                
+                // Process EERR with period calculation (current - previous)
+                const eerr = processEERR(sourceData, previousMonthData);
                 monthlyData[month] = eerr;
                 sortedMonths.push(month);
             }
