@@ -16,7 +16,8 @@ import {
   Receipt,
   Building2,
   Users,
-  LayoutGrid
+  LayoutGrid,
+  DollarSign
 } from 'lucide-react';
 
 const navigation = [
@@ -24,6 +25,7 @@ const navigation = [
   { name: 'Balance 8 Columns', href: '/dashboard/8columns', icon: Table2 },
   { name: 'Balance General', href: '/dashboard/balance-general', icon: LayoutGrid },
   { name: 'Estado de Resultados (EERR)', href: '/dashboard/eerr', icon: FileText },
+  { name: 'Flujo de Caja', href: '/dashboard/flujo-caja', icon: DollarSign },
   { name: 'Facturas Mensuales', href: '/dashboard/invoices', icon: Receipt },
   { name: 'Facturas por Sucursal', href: '/dashboard/invoices/branch', icon: Building2 },
   { name: 'Facturas por Vendedor', href: '/dashboard/invoices/salesman', icon: Users },

@@ -149,3 +149,108 @@ export interface EERRResponse {
   monthsAvailable?: string[];
   error?: string;
 }
+
+// ============================================
+// FLUJO DE CAJA (CASH FLOW) TYPES
+// ============================================
+
+export interface CashFlowWorkingCapitalChanges {
+  cuentasPorCobrar: {
+    mesActual: number;
+    mesAnterior: number;
+    cambio: number; // Negativo si aumenta (dinero no cobrado)
+  };
+  inventarios: {
+    mesActual: number;
+    mesAnterior: number;
+    cambio: number; // Negativo si aumenta (dinero invertido)
+  };
+  cuentasPorPagar: {
+    mesActual: number;
+    mesAnterior: number;
+    cambio: number; // Positivo si aumenta (dinero no pagado)
+  };
+  total: number;
+}
+
+export interface CashFlowOperating {
+  utilidadNeta: number;
+  ajustesNoMonetarios: {
+    depreciacion: number;
+    otros: number;
+    total: number;
+  };
+  cambiosCapitalTrabajo: CashFlowWorkingCapitalChanges;
+  total: number;
+}
+
+export interface CashFlowInvestment {
+  activosFijosIniciales: number;
+  activosFijosFinales: number;
+  depreciacionPeriodo: number;
+  comprasNetasEstimadas: number; // Negativo = compra, Positivo = venta
+  total: number;
+}
+
+export interface CashFlowFinancing {
+  deudasLargoPlazoIniciales: number;
+  deudasLargoPlazoFinales: number;
+  cambioDeudas: number; // Positivo = préstamo, Negativo = pago
+  patrimonioInicial: number;
+  patrimonioFinal: number;
+  cambioPatrimonio: number; // Ajustado por utilidad
+  total: number;
+}
+
+export interface CashFlowIndicators {
+  margenFlujoOperativo: number; // FCO / Ingresos * 100
+  calidadIngresos: number; // FCO / Utilidad Neta * 100
+  coberturaInversion?: number; // FCO / |FCI|
+  diasEfectivoDisponible?: number; // Saldo / Gastos diarios
+}
+
+export interface CashFlowData {
+  period: string; // "2025-01"
+  periodName: string; // "Enero 2025"
+  year: number;
+  month: number;
+  
+  // FLUJO OPERATIVO (Fase 1)
+  operatingCashFlow: CashFlowOperating;
+  
+  // FLUJO DE INVERSIÓN (Fase 3)
+  investmentCashFlow?: CashFlowInvestment;
+  
+  // FLUJO DE FINANCIACIÓN (Fase 3)
+  financingCashFlow?: CashFlowFinancing;
+  
+  // RESUMEN
+  flujoNetoTotal: number;
+  saldoEfectivoInicial?: number;
+  saldoEfectivoFinal?: number;
+  
+  // INDICADORES
+  indicadores: CashFlowIndicators;
+  
+  // DATOS DE ORIGEN
+  ingresosOperacionales: number;
+  
+  // METADATA
+  hasCompletePreviousMonth: boolean; // Si tiene datos del mes anterior para comparar
+  warnings?: string[]; // Advertencias sobre datos faltantes o estimados
+}
+
+export interface CashFlowResponse {
+  success: boolean;
+  data?: CashFlowData;
+  error?: string;
+  message?: string;
+}
+
+export interface CashFlowMultipleResponse {
+  success: boolean;
+  data?: { [month: string]: CashFlowData };
+  year?: string;
+  availableMonths?: string[];
+  error?: string;
+}
