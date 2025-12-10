@@ -11,6 +11,16 @@ interface DataStatus {
   lastUpdated: string | null
 }
 
+interface PersistedState {
+  selectedYear: number
+  selectedMonth: number
+  logs: string[]
+  activeJobId: string | null
+  lastUpdated: string
+}
+
+const STORAGE_KEY = 'laudus-load-invoices-salesman-state'
+
 const MONTHS = [
   { value: 1, label: 'Enero' },
   { value: 2, label: 'Febrero' },
@@ -26,7 +36,38 @@ const MONTHS = [
   { value: 12, label: 'Diciembre' }
 ]
 
+// Load state from localStorage
+const loadPersistedState = (): PersistedState | null => {
+  if (typeof window === 'undefined') return null
+  try {
+    const stored = localStorage.getItem(STORAGE_KEY)
+    if (!stored) return null
+    const parsed: PersistedState = JSON.parse(stored)
+    const lastUpdated = new Date(parsed.lastUpdated)
+    const daysSince = (Date.now() - lastUpdated.getTime()) / (1000 * 60 * 60 * 24)
+    if (daysSince > 7) {
+      localStorage.removeItem(STORAGE_KEY)
+      return null
+    }
+    return parsed
+  } catch {
+    localStorage.removeItem(STORAGE_KEY)
+    return null
+  }
+}
+
+// Save state to localStorage
+const savePersistedState = (state: PersistedState) => {
+  if (typeof window === 'undefined') return
+  try {
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(state))
+  } catch (error) {
+    console.error('Error saving state:', error)
+  }
+}
+
 export default function LoadInvoicesSalesmanPage() {
+  const [isMounted, setIsMounted] = useState(false)
   const [selectedYear, setSelectedYear] = useState<number>(new Date().getFullYear())
   const [selectedMonth, setSelectedMonth] = useState<number>(new Date().getMonth() + 1)
   const [isLoading, setIsLoading] = useState(false)
@@ -41,6 +82,30 @@ export default function LoadInvoicesSalesmanPage() {
   // Generate year options
   const currentYear = new Date().getFullYear()
   const years = Array.from({ length: 10 }, (_, i) => currentYear - i)
+
+  // Load persisted state on mount
+  useEffect(() => {
+    setIsMounted(true)
+    const persisted = loadPersistedState()
+    if (persisted) {
+      if (persisted.selectedYear) setSelectedYear(persisted.selectedYear)
+      if (persisted.selectedMonth) setSelectedMonth(persisted.selectedMonth)
+      if (persisted.logs && persisted.logs.length > 0) setLogs(persisted.logs)
+      if (persisted.activeJobId) setActiveJobId(persisted.activeJobId)
+    }
+  }, [])
+
+  // Persist state when it changes
+  useEffect(() => {
+    if (!isMounted) return
+    savePersistedState({
+      selectedYear,
+      selectedMonth,
+      logs,
+      activeJobId,
+      lastUpdated: new Date().toISOString()
+    })
+  }, [selectedYear, selectedMonth, logs, activeJobId, isMounted])
 
   const addLog = useCallback((message: string) => {
     const timestamp = new Date().toLocaleTimeString('es-CL')
@@ -292,7 +357,7 @@ export default function LoadInvoicesSalesmanPage() {
           </div>
         </Card>
 
-        {logs.length > 0 && (
+        {(logs.length > 0 || activeJobId) && (
           <Card title='Log del Proceso'>
             <div className='bg-gray-900 rounded-lg p-4 font-mono text-sm max-h-96 overflow-y-auto'>
               {logs.map((log, index) => (

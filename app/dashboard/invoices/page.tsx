@@ -218,8 +218,8 @@ export default function InvoicesPage() {
                 onChange={(e) => setSelectedYear(Number(e.target.value))}
                 className="px-4 py-2 border-2 border-gray-400 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white font-medium text-gray-900"
               >
-                {availableYears.map((year) => (
-                  <option key={year} value={year}>
+                {availableYears.map((year, index) => (
+                  <option key={`year-${year}-${index}`} value={year}>
                     {year}
                   </option>
                 ))}

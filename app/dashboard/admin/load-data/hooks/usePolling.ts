@@ -227,11 +227,18 @@ export function usePolling({ addLog, setEndpoints, setLogs }: UsePollingProps) {
         return null
       }
 
-      // Restaurar logs desde MongoDB
+      // Restaurar logs desde MongoDB solo si hay más logs en el servidor
+      // (los logs de localStorage ya están cargados)
       if (job.logs && job.logs.length > 0) {
-        setLogs(job.logs)
-        addLog('✅ Estado recuperado desde el servidor')
+        setLogs(prevLogs => {
+          // Si el servidor tiene más logs, usar los del servidor
+          if (job.logs.length > prevLogs.length) {
+            return job.logs
+          }
+          return prevLogs
+        })
       }
+      addLog('✅ Estado recuperado desde el servidor')
 
       // Restaurar estados de endpoints
       setEndpoints(prev => prev.map(e => {

@@ -40,15 +40,20 @@ export default function LoadDataPage() {
   } = usePolling({ addLog, setEndpoints, setLogs })
 
   const [showClearModal, setShowClearModal] = useState(false)
+  const [hasAttemptedRecovery, setHasAttemptedRecovery] = useState(false)
 
   // Recuperar job activo al montar
   useEffect(() => {
+    if (hasAttemptedRecovery) return
+    
     const persisted = getPersistedState()
     if (persisted?.activeJobId) {
-      addLog('🔄 Recuperando estado del proceso desde el servidor...')
+      setHasAttemptedRecovery(true)
+      // Los logs ya están cargados desde localStorage por useLoadDataState
+      // Solo necesitamos verificar el estado actual del job y reanudar si es necesario
       fetchJobStatusAndResume(persisted.activeJobId, endpoints)
     }
-  }, [])
+  }, [hasAttemptedRecovery])
 
   const handleClearData = () => {
     stopPolling()
@@ -180,7 +185,8 @@ export default function LoadDataPage() {
         subtitle='Importar datos históricos desde la API de Laudus ERP'
       />
 
-      <div className='p-4 sm:p-6 lg:p-8 space-y-6'>
+      <div className='p-4 sm:p-6 lg:p-8'>
+        <div className='max-w-2xl mx-auto space-y-6'>
         {/* Configuración */}
         <Card title='Configuración de Carga'>
           <div className='space-y-6'>
@@ -262,6 +268,7 @@ export default function LoadDataPage() {
           <InfoCard />
           <StateIndicator getPersistedState={getPersistedState} isMounted={isMounted} />
         </Card>
+        </div>
       </div>
 
       <ClearDataModal

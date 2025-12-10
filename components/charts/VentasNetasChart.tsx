@@ -65,7 +65,7 @@ export function VentasNetasChart({ data, years }: VentasNetasChartProps) {
           <defs>
             {years.map((year, index) => (
               <linearGradient
-                key={year}
+                key={`gradient-${year}-${index}`}
                 id={`colorNet${year}`}
                 x1="0"
                 y1="0"
@@ -105,7 +105,7 @@ export function VentasNetasChart({ data, years }: VentasNetasChartProps) {
           />
           {years.map((year, index) => (
             <Area
-              key={year}
+              key={`area-${year}-${index}`}
               type="monotone"
               dataKey={`net${year}`}
               name={`${year}`}
