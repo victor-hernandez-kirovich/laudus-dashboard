@@ -159,26 +159,47 @@ export default function LoadInvoicesMonthlyPage() {
       pollCount++
 
       try {
-        // Check if data exists in MongoDB
-        const dataResponse = await fetch(`/api/admin/load-invoices-monthly?period=${period}`)
-        if (dataResponse.ok) {
-          const dataResult = await dataResponse.json()
+        // Check job status in load_data_status collection
+        const statusResponse = await fetch(`/api/admin/load-data-status?jobId=${jobId}`)
+        if (statusResponse.ok) {
+          const statusResult = await statusResponse.json()
           
-          if (dataResult.dataExists && dataResult.records > 0) {
-            addLog(`✅ Datos detectados: ${dataResult.records} registros`)
-            addLog('🎉 ¡Proceso completado exitosamente!')
-            setDataStatus({
-              exists: true,
-              records: dataResult.records,
-              lastUpdated: dataResult.lastUpdated
-            })
-            setIsLoading(false)
-            setActiveJobId(null)
-            if (pollingRef.current) {
-              clearInterval(pollingRef.current)
-              pollingRef.current = null
+          if (statusResult.success && statusResult.job) {
+            const job = statusResult.job
+            
+            // Add any new logs from the job
+            if (job.logs && Array.isArray(job.logs)) {
+              const lastLog = job.logs[job.logs.length - 1]
+              if (lastLog && !logs.includes(lastLog)) {
+                // Only add completion/error logs from Python
+                if (lastLog.includes('✅') || lastLog.includes('❌')) {
+                  addLog(lastLog)
+                }
+              }
             }
-            return
+            
+            if (job.status === 'completed') {
+              addLog('🎉 ¡Proceso completado exitosamente!')
+              checkDataStatus() // Refresh data status
+              setIsLoading(false)
+              setActiveJobId(null)
+              if (pollingRef.current) {
+                clearInterval(pollingRef.current)
+                pollingRef.current = null
+              }
+              return
+            }
+            
+            if (job.status === 'failed') {
+              addLog(`❌ Error: ${job.error || 'Error desconocido'}`)
+              setIsLoading(false)
+              setActiveJobId(null)
+              if (pollingRef.current) {
+                clearInterval(pollingRef.current)
+                pollingRef.current = null
+              }
+              return
+            }
           }
         }
 
@@ -200,7 +221,7 @@ export default function LoadInvoicesMonthlyPage() {
         console.error('Polling error:', error)
       }
     }, 5000) // Poll every 5 seconds
-  }, [addLog, period])
+  }, [addLog, logs, checkDataStatus])
 
   // Cleanup polling on unmount
   useEffect(() => {
