@@ -17,7 +17,10 @@ import {
   Building2,
   Users,
   LayoutGrid,
-  DollarSign
+  DollarSign,
+  Upload,
+  ChevronDown,
+  ChevronRight
 } from 'lucide-react';
 
 const navigation = [
@@ -29,14 +32,24 @@ const navigation = [
   { name: 'Facturas Mensuales', href: '/dashboard/invoices', icon: Receipt },
   { name: 'Facturas por Sucursal', href: '/dashboard/invoices/branch', icon: Building2 },
   { name: 'Facturas por Vendedor', href: '/dashboard/invoices/salesman', icon: Users },
-  { name: 'Cargar Datos', href: '/dashboard/admin/load-data', icon: Database },
+];
+
+const adminNavigation = [
+  { name: 'Cargar Balance 8 Columnas', href: '/dashboard/admin/load-data', icon: Table2 },
+  { name: 'Cargar Facturas Mensuales', href: '/dashboard/admin/load-invoices-monthly', icon: Receipt },
+  { name: 'Cargar Facturas por Vendedor', href: '/dashboard/admin/load-invoices-salesman', icon: Users },
+  { name: 'Cargar Facturas por Sucursal', href: '/dashboard/admin/load-invoices-branch', icon: Building2 },
 ];
 
 export function Sidebar() {
   const pathname = usePathname();
   const [isOpen, setIsOpen] = useState(false);
+  const [isAdminOpen, setIsAdminOpen] = useState(false);
 
   const closeSidebar = () => setIsOpen(false);
+
+  // Check if current path is in admin section
+  const isAdminActive = pathname.startsWith('/dashboard/admin');
 
   return (
     <>
@@ -95,6 +108,55 @@ export function Sidebar() {
               </Link>
             );
           })}
+
+          {/* Admin Section - Collapsible */}
+          <div className="pt-4 mt-4 border-t border-gray-800">
+            <button
+              onClick={() => setIsAdminOpen(!isAdminOpen)}
+              className={cn(
+                'w-full flex items-center justify-between gap-3 rounded-lg px-3 py-2.5 text-sm font-medium transition-colors',
+                isAdminActive
+                  ? 'bg-gray-800 text-white'
+                  : 'text-gray-400 hover:bg-gray-800 hover:text-white'
+              )}
+            >
+              <div className="flex items-center gap-3">
+                <Upload className="h-5 w-5 flex-shrink-0" />
+                <span>Cargar Datos</span>
+              </div>
+              {isAdminOpen ? (
+                <ChevronDown className="h-4 w-4" />
+              ) : (
+                <ChevronRight className="h-4 w-4" />
+              )}
+            </button>
+
+            {isAdminOpen && (
+              <div className="mt-1 ml-4 space-y-1">
+                {adminNavigation.map((item) => {
+                  const isActive = pathname === item.href;
+                  const Icon = item.icon;
+
+                  return (
+                    <Link
+                      key={item.name}
+                      href={item.href}
+                      onClick={closeSidebar}
+                      className={cn(
+                        'flex items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium transition-colors',
+                        isActive
+                          ? 'bg-gray-800 text-white'
+                          : 'text-gray-400 hover:bg-gray-800 hover:text-white'
+                      )}
+                    >
+                      <Icon className="h-4 w-4 flex-shrink-0" />
+                      <span className="truncate text-xs">{item.name}</span>
+                    </Link>
+                  );
+                })}
+              </div>
+            )}
+          </div>
         </nav>
 
         {/* Footer */}
