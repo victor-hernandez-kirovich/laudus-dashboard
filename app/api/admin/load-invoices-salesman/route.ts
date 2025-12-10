@@ -125,7 +125,8 @@ export async function POST(request: NextRequest) {
           ref: 'main',
           inputs: {
             year: year.toString(),
-            month: month.toString()
+            month: month.toString(),
+            job_id: jobId
           }
         })
       }
