@@ -18,7 +18,8 @@ async function executeLocalPythonAsync(year: number, month: number, jobId: strin
     const pythonProcess = spawn('python', [
       scriptPath,
       '--year', year.toString(),
-      '--month', month.toString()
+      '--month', month.toString(),
+      '--job-id', jobId
     ], {
       cwd: apiPath,
       detached: false,
