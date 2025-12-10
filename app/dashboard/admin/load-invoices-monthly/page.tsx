@@ -283,6 +283,16 @@ export default function LoadInvoicesMonthlyPage() {
     addLog('⏹️ Monitoreo detenido')
   }
 
+  const clearLogs = () => {
+    if (pollingRef.current) {
+      clearInterval(pollingRef.current)
+      pollingRef.current = null
+    }
+    setLogs([])
+    setActiveJobId(null)
+    setIsLoading(false)
+  }
+
   return (
     <div>
       <Header
@@ -295,6 +305,18 @@ export default function LoadInvoicesMonthlyPage() {
         {/* Configuration */}
         <Card title='Configuración'>
           <div className='space-y-6'>
+            {/* Clear logs button */}
+            <div className='flex justify-end'>
+              <button
+                onClick={clearLogs}
+                disabled={isLoading}
+                className='text-xs text-gray-600 hover:text-red-600 underline disabled:opacity-50 disabled:cursor-not-allowed transition-colors'
+                title='Limpiar logs y resetear estado'
+              >
+                🔄 Limpiar logs
+              </button>
+            </div>
+
             {/* Year and Month Selectors */}
             <div className='grid grid-cols-1 sm:grid-cols-2 gap-4'>
               <div>

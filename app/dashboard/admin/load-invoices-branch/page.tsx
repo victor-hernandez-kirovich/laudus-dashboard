@@ -272,6 +272,16 @@ export default function LoadInvoicesBranchPage() {
     addLog('⏹️ Monitoreo detenido')
   }
 
+  const clearLogs = () => {
+    if (pollingRef.current) {
+      clearInterval(pollingRef.current)
+      pollingRef.current = null
+    }
+    setLogs([])
+    setActiveJobId(null)
+    setIsLoading(false)
+  }
+
   return (
     <div>
       <Header
@@ -283,6 +293,18 @@ export default function LoadInvoicesBranchPage() {
         <div className='max-w-2xl mx-auto space-y-6'>
         <Card title='Configuración'>
           <div className='space-y-6'>
+            {/* Clear logs button */}
+            <div className='flex justify-end'>
+              <button
+                onClick={clearLogs}
+                disabled={isLoading}
+                className='text-xs text-gray-600 hover:text-red-600 underline disabled:opacity-50 disabled:cursor-not-allowed transition-colors'
+                title='Limpiar logs y resetear estado'
+              >
+                🔄 Limpiar logs
+              </button>
+            </div>
+
             <div className='grid grid-cols-1 sm:grid-cols-2 gap-4'>
               <div>
                 <label className='flex items-center gap-2 text-sm font-medium text-gray-700 mb-2'>
