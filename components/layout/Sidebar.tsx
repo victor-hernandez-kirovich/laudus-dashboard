@@ -31,13 +31,11 @@ const navigation = [
   { name: 'Flujo de Caja', href: '/dashboard/flujo-caja', icon: DollarSign },
   { name: 'Facturas Mensuales', href: '/dashboard/invoices', icon: Receipt },
   { name: 'Facturas por Sucursal', href: '/dashboard/invoices/branch', icon: Building2 },
-  { name: 'Facturas por Vendedor', href: '/dashboard/invoices/salesman', icon: Users },
 ];
 
 const adminNavigation = [
   { name: 'Cargar Balance 8 Columnas', href: '/dashboard/admin/load-data', icon: Table2 },
   { name: 'Cargar Facturas Mensuales', href: '/dashboard/admin/load-invoices-monthly', icon: Receipt },
-  { name: 'Cargar Facturas por Vendedor', href: '/dashboard/admin/load-invoices-salesman', icon: Users },
   { name: 'Cargar Facturas por Sucursal', href: '/dashboard/admin/load-invoices-branch', icon: Building2 },
 ];
 
