@@ -2,38 +2,19 @@ import { NextRequest, NextResponse } from 'next/server'
 import { spawn } from 'child_process'
 import path from 'path'
 import clientPromise from '@/lib/mongodb'
+import { LoadDataJobStatus } from '@/lib/types'
 
 interface LoadInvoicesRequest {
   year: number
   month: number
 }
 
-interface LoadInvoicesJobStatus {
-  jobId: string
-  year: number
-  month: number
-  period: string
-  status: 'pending' | 'running' | 'completed' | 'failed'
-  mode: 'local-execution-async'
-  startedAt: string
-  completedAt?: string
-  error?: string
-  records?: number
-  logs: string[]
-}
-
 // Execute Python script locally in background
-async function executeLocalPythonAsync(
-  year: number,
-  month: number,
-  jobId: string
-): Promise<NextResponse> {
+async function executeLocalPythonAsync(year: number, month: number, jobId: string): Promise<NextResponse> {
   try {
-    // Path to Python script in laudus-api repo (sibling directory)
     const apiPath = path.join(process.cwd(), '..', 'laudus-api')
     const scriptPath = path.join(apiPath, 'scripts', 'fetch_invoices_by_branch.py')
 
-    // Execute Python in background using spawn
     const pythonProcess = spawn('python', [
       scriptPath,
       '--year', year.toString(),
@@ -46,8 +27,6 @@ async function executeLocalPythonAsync(
 
     pythonProcess.unref()
 
-    const period = `${year}-${month.toString().padStart(2, '0')}`
-
     return NextResponse.json({
       success: true,
       mode: 'local-execution-async',
@@ -56,8 +35,7 @@ async function executeLocalPythonAsync(
       details: {
         year,
         month,
-        period,
-        note: 'El proceso está ejecutándose en segundo plano. El sistema monitoreará automáticamente el progreso.'
+        note: 'El proceso está ejecutándose en segundo plano.'
       }
     })
 
@@ -78,58 +56,126 @@ export async function POST(request: NextRequest) {
     const body: LoadInvoicesRequest = await request.json()
     const { year, month } = body
 
-    // Validate year
-    if (!year || year < 2000 || year > 2100) {
+    // Validar año y mes
+    if (!year || year < 2020 || year > 2030) {
       return NextResponse.json(
-        { success: false, error: 'Año inválido. Debe estar entre 2000 y 2100' },
+        { success: false, error: 'Año inválido (debe estar entre 2020 y 2030)' },
         { status: 400 }
       )
     }
 
-    // Validate month
     if (!month || month < 1 || month > 12) {
       return NextResponse.json(
-        { success: false, error: 'Mes inválido. Debe estar entre 1 y 12' },
+        { success: false, error: 'Mes inválido (debe estar entre 1 y 12)' },
         { status: 400 }
       )
     }
 
-    // Validate not future date
-    const now = new Date()
-    const targetDate = new Date(year, month - 1, 1)
-    if (targetDate > now) {
-      return NextResponse.json(
-        { success: false, error: 'No se puede cargar datos de fechas futuras' },
-        { status: 400 }
-      )
-    }
+    // Generar jobId único
+    const jobId = `invoices_branch_${year}_${month}_${Date.now()}_${Math.random().toString(36).substring(7)}`
 
-    const period = `${year}-${month.toString().padStart(2, '0')}`
-    const jobId = `invoices-branch_${period}_${Date.now()}_${Math.random().toString(36).substring(7)}`
-
-    // Connect to MongoDB and create initial job record
+    // Conectar a MongoDB
     const client = await clientPromise
     const db = client.db('laudus_data')
-    const collection = db.collection<LoadInvoicesJobStatus>('load_invoices_status')
+    const collection = db.collection<LoadDataJobStatus>('load_data_status')
 
-    const jobStatus: LoadInvoicesJobStatus = {
+    const jobStatus: LoadDataJobStatus = {
       jobId,
-      year,
-      month,
-      period,
-      status: 'running',
-      mode: 'local-execution-async',
+      date: `${year}-${month.toString().padStart(2, '0')}-01`,
+      endpoints: ['invoices_by_branch'],
+      status: 'pending',
+      mode: 'github-actions',
       startedAt: new Date().toISOString(),
+      results: [{
+        endpoint: 'invoices_by_branch',
+        status: 'pending'
+      }],
       logs: [
-        `[${new Date().toLocaleTimeString('es-CL')}] 📅 Iniciando carga de facturas por sucursal para ${period}`,
-        `[${new Date().toLocaleTimeString('es-CL')}] 🔐 Ejecutando localmente en segundo plano`
+        `[${new Date().toLocaleTimeString('es-CL')}] 📅 Iniciando carga de facturas por sucursal para ${year}-${month.toString().padStart(2, '0')}`,
       ]
     }
 
+    // Verificar si hay GitHub token
+    const githubToken = process.env.GITHUB_TOKEN
+
+    if (!githubToken) {
+      // Ejecución local
+      jobStatus.mode = 'local-execution-async'
+      jobStatus.status = 'running'
+      jobStatus.logs.push(`[${new Date().toLocaleTimeString('es-CL')}] 🔐 Ejecutando localmente en segundo plano`)
+
+      await collection.insertOne(jobStatus)
+
+      return await executeLocalPythonAsync(year, month, jobId)
+    }
+
+    // Disparar GitHub Actions workflow
+    const workflowResponse = await fetch(
+      'https://api.github.com/repos/victor-hernandez-kirovich/laudus-api/actions/workflows/laudus-invoices-branch.yml/dispatches',
+      {
+        method: 'POST',
+        headers: {
+          'Accept': 'application/vnd.github+json',
+          'Authorization': `Bearer ${githubToken}`,
+          'X-GitHub-Api-Version': '2022-11-28',
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({
+          ref: 'main',
+          inputs: {
+            year: year.toString(),
+            month: month.toString()
+          }
+        })
+      }
+    )
+
+    if (!workflowResponse.ok) {
+      const errorText = await workflowResponse.text()
+      console.error('[DEBUG] GitHub API error:', errorText)
+
+      await collection.updateOne(
+        { jobId },
+        {
+          $set: {
+            status: 'failed',
+            error: `Failed to trigger GitHub Actions: ${workflowResponse.status}`,
+            completedAt: new Date().toISOString()
+          },
+          $push: {
+            logs: `[${new Date().toLocaleTimeString('es-CL')}] ❌ Error: ${errorText}`
+          } as any
+        }
+      )
+
+      throw new Error(`Failed to trigger GitHub Actions: ${workflowResponse.status} ${errorText}`)
+    }
+
+    // Actualizar job status
+    jobStatus.mode = 'github-actions'
+    jobStatus.status = 'running'
+    jobStatus.actionUrl = 'https://github.com/victor-hernandez-kirovich/laudus-api/actions'
+    jobStatus.workflowName = 'Laudus Invoices By Branch'
+    jobStatus.logs.push(
+      `[${new Date().toLocaleTimeString('es-CL')}] ✅ Workflow de GitHub Actions disparado exitosamente`,
+      `[${new Date().toLocaleTimeString('es-CL')}] 🔗 Ver progreso: ${jobStatus.actionUrl}`
+    )
+
     await collection.insertOne(jobStatus)
 
-    const response = await executeLocalPythonAsync(year, month, jobId)
-    return response
+    return NextResponse.json({
+      success: true,
+      jobId,
+      message: 'GitHub Actions workflow triggered successfully',
+      mode: 'github-actions',
+      actionUrl: jobStatus.actionUrl,
+      workflowName: jobStatus.workflowName,
+      details: {
+        year,
+        month,
+        note: 'El proceso está ejecutándose en GitHub Actions.'
+      }
+    })
 
   } catch (error: any) {
     console.error('Error in load-invoices-branch API:', error)
@@ -138,62 +184,6 @@ export async function POST(request: NextRequest) {
         success: false,
         error: error.message || 'Internal server error'
       },
-      { status: 500 }
-    )
-  }
-}
-
-export async function GET(request: NextRequest) {
-  try {
-    const { searchParams } = new URL(request.url)
-    const jobId = searchParams.get('jobId')
-    const period = searchParams.get('period')
-
-    const client = await clientPromise
-    const db = client.db('laudus_data')
-
-    // If jobId provided, get specific job status
-    if (jobId) {
-      const collection = db.collection<LoadInvoicesJobStatus>('load_invoices_status')
-      const job = await collection.findOne({ jobId })
-
-      if (!job) {
-        return NextResponse.json(
-          { success: false, error: 'Job not found' },
-          { status: 404 }
-        )
-      }
-
-      return NextResponse.json({ success: true, job })
-    }
-
-    // If period provided, check if data exists
-    if (period) {
-      const dataCollection = db.collection('invoices_by_branch')
-      const data = await dataCollection.findOne({ period: period })
-
-      return NextResponse.json({
-        success: true,
-        dataExists: !!data,
-        records: data?.recordCount || 0,
-        lastUpdated: data?.insertedAt || null
-      })
-    }
-
-    // Return recent jobs
-    const collection = db.collection<LoadInvoicesJobStatus>('load_invoices_status')
-    const jobs = await collection
-      .find({ jobId: { $regex: /^invoices-branch/ } })
-      .sort({ startedAt: -1 })
-      .limit(10)
-      .toArray()
-
-    return NextResponse.json({ success: true, jobs })
-
-  } catch (error: any) {
-    console.error('Error in load-invoices-branch GET:', error)
-    return NextResponse.json(
-      { success: false, error: error.message || 'Internal server error' },
       { status: 500 }
     )
   }
