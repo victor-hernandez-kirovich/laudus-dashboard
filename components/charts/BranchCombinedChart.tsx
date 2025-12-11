@@ -28,9 +28,10 @@ interface BranchInfo {
 interface BranchCombinedChartProps {
   data: MonthlyStackedData[];
   branches: BranchInfo[];
+  minWidth?: number; // Ancho mínimo para scroll horizontal
 }
 
-export function BranchCombinedChart({ data, branches }: BranchCombinedChartProps) {
+export function BranchCombinedChart({ data, branches, minWidth }: BranchCombinedChartProps) {
   // Calcular el total mensual para la línea de tendencia
   const dataWithTotal = useMemo(() => {
     return data.map(month => {
@@ -67,9 +68,9 @@ export function BranchCombinedChart({ data, branches }: BranchCombinedChartProps
           
           {/* Total del mes (suma de todas las sucursales) */}
           <div className="flex items-center gap-2 mb-3 pb-2 border-b-2 border-gray-300">
-            <div className="w-3 h-3 rounded-full bg-gray-800" />
+            <div className="w-3 h-3 rounded-full bg-[#3f62fdff]" />
             <span className="text-sm font-semibold text-gray-700">Total del mes:</span>
-            <span className="text-sm font-bold text-gray-900">
+            <span className="text-sm font-bold text-[#3f62fdff]">
               {formatCurrency(totalMes)}
             </span>
           </div>
@@ -101,12 +102,16 @@ export function BranchCombinedChart({ data, branches }: BranchCombinedChartProps
     return null;
   };
 
+  // Calcular ancho dinámico basado en cantidad de datos
+  const chartWidth = minWidth || '100%';
+
   return (
-    <div className="w-full h-[500px]">
-      <ResponsiveContainer width="100%" height="100%">
+    <div className="w-full h-[800px] overflow-x-auto">
+      <div style={{ width: chartWidth, minWidth: '200%', height: '100%' }}>
+        <ResponsiveContainer width="100%" height="100%">
         <ComposedChart
           data={dataWithTotal}
-          margin={{ top: 20, right: 60, left: 20, bottom: 5 }}
+          margin={{ top: 0, right: 0, left: 20, bottom: 20 }}
         >
           <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" />
           <XAxis
@@ -118,10 +123,11 @@ export function BranchCombinedChart({ data, branches }: BranchCombinedChartProps
           <YAxis
             yAxisId="left"
             stroke="#6b7280"
-            style={{ fontSize: "12px" }}
+            style={{ fontSize: "14px" }}
             tickFormatter={(value) => `$${(value / 1000000).toFixed(1)}M`}
             domain={[0, 150000000]}
           />
+         
          
           <Tooltip content={<CustomTooltip />} />
           <Legend
@@ -161,14 +167,15 @@ export function BranchCombinedChart({ data, branches }: BranchCombinedChartProps
             type="monotone"
             dataKey="totalMensual"
             name="Total Mensual"
-            stroke="#1f2937"
+            stroke="#3f62fdff"
             strokeWidth={3}
-            dot={{ r: 5, fill: "#1f2937", strokeWidth: 2, stroke: "#fff" }}
-            activeDot={{ r: 7, fill: "#1f2937", strokeWidth: 2, stroke: "#fff" }}
+            dot={{ r: 5, fill: "#3f62fdff", strokeWidth: 2, stroke: "#fff" }}
+            activeDot={{ r: 7, fill: "#3f62fdff", strokeWidth: 2, stroke: "#fff" }}
             yAxisId="right"
           />
         </ComposedChart>
       </ResponsiveContainer>
+      </div>
     </div>
   );
 }
