@@ -5,8 +5,7 @@ import { Card } from '@/components/ui/Card'
 import { formatCurrency } from '@/lib/utils'
 import { Building2 } from 'lucide-react'
 import { Header } from '@/components/layout/Header'
-import { TopSucursalesChart } from '@/components/charts/TopSucursalesChart'
-import { BranchMonthlyTrendsChart } from '@/components/charts/BranchMonthlyTrendsChart'
+import { BranchCombinedChart } from '@/components/charts/BranchCombinedChart'
 import { BranchMarketShareChart } from '@/components/charts/BranchMarketShareChart'
 
 interface BranchData {
@@ -449,13 +448,24 @@ export default function InvoicesByBranchPage() {
             <div className="p-6">
               <div className="mb-4">
                 <h3 className="text-lg font-bold text-gray-900">
-                  📊 Comparativo Ventas Netas por Sucursal
+                  📊 Ventas Netas por Sucursal - Comparativo y Tendencias
                 </h3>
                 <p className="text-sm text-gray-600 mt-1">
-                  Ventas mensuales apiladas por sucursal - {selectedYear}
+                  Barras apiladas (volumen) + líneas de tendencia (evolución) - {selectedYear}
                 </p>
+                <div className="mt-3 p-3 bg-blue-50 rounded-lg border border-blue-200">
+                  <p className="text-xs font-semibold text-blue-900 mb-1">
+                    💡 Cómo interpretar:
+                  </p>
+                  <p className="text-xs text-blue-800">
+                    <strong>Barras:</strong> Muestran el volumen y composición de ventas por sucursal en cada mes.
+                  </p>
+                  <p className="text-xs text-blue-800 mt-1">
+                    <strong>Líneas:</strong> Muestran la tendencia y estacionalidad de cada sucursal a lo largo del año.
+                  </p>
+                </div>
               </div>
-              <TopSucursalesChart 
+              <BranchCombinedChart 
                 data={prepareTopSucursalesData()} 
                 branches={prepareBranchInfo()}
               />
@@ -595,35 +605,6 @@ export default function InvoicesByBranchPage() {
                   )}
                 </div>
               </div>
-            </div>
-          </Card>
-
-          {/* Gráfica 3: Evolución Mensual (Líneas) */}
-          <Card>
-            <div className="p-6">
-              <div className="mb-4">
-                <h3 className="text-lg font-bold text-gray-900">
-                  📈 Evolución Mensual de Ventas por Sucursal
-                </h3>
-                <p className="text-sm text-gray-600 mt-1">
-                  Tendencias y estacionalidad de ventas netas - {selectedYear}
-                </p>
-                <div className="mt-3 p-3 bg-green-50 rounded-lg border border-green-200">
-                  <p className="text-xs font-semibold text-green-900 mb-1">
-                    💡 Análisis:
-                  </p>
-                  <p className="text-xs text-green-800">
-                    Identifica patrones estacionales, tendencias de crecimiento y compara el desempeño temporal de cada sucursal.
-                  </p>
-                  <p className="text-xs text-green-700 mt-1">
-                    Las líneas paralelas indican crecimiento similar, mientras que líneas divergentes muestran cambios en posicionamiento relativo.
-                  </p>
-                </div>
-              </div>
-              <BranchMonthlyTrendsChart 
-                data={prepareMonthlyTrendsData()} 
-                branches={prepareBranchInfo()}
-              />
             </div>
           </Card>
         </div>
