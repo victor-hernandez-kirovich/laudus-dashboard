@@ -5,6 +5,9 @@ import {
   getCuentasPorCobrar,
   getInventarios,
   getCuentasPorPagar,
+  getActivosFijos,
+  getDeudasLargoPlazo,
+  getPatrimonio,
   calculateWorkingCapitalChanges,
   calculateCashFlowMargin,
   calculateIncomeQuality,
@@ -155,6 +158,63 @@ export async function GET(request: Request) {
       cambiosCapitalTrabajo.total;
     
     // ============================================
+    // 5b. CALCULAR FLUJO DE INVERSIÓN
+    // ============================================
+    
+    const activosFijosActual = getActivosFijos(balanceActual);
+    const activosFijosAnterior = balanceAnterior ? getActivosFijos(balanceAnterior) : 0;
+    
+    // Método indirecto: Flujo de Inversión = -(Activos Fijos Final - Inicial) + Depreciación
+    // Porque: ΔAF bruto = Compras - Ventas, pero tenemos AF neto
+    // AF neto final = AF neto inicial - Depreciación + Compras netas
+    // Compras netas = AF neto final - AF neto inicial + Depreciación
+    // Flujo inversión = -Compras netas (salida de efectivo)
+    const cambioActivosFijos = activosFijosActual - activosFijosAnterior;
+    const comprasNetasEstimadas = cambioActivosFijos + depreciacion;
+    const flujoInversion = -comprasNetasEstimadas;
+    
+    const investmentCashFlow = {
+      activosFijosIniciales: activosFijosAnterior,
+      activosFijosFinales: activosFijosActual,
+      depreciacionPeriodo: depreciacion,
+      comprasNetasEstimadas: comprasNetasEstimadas,
+      total: flujoInversion,
+    };
+    
+    // ============================================
+    // 5c. CALCULAR FLUJO DE FINANCIAMIENTO
+    // ============================================
+    
+    const deudasLPActual = getDeudasLargoPlazo(balanceActual);
+    const deudasLPAnterior = balanceAnterior ? getDeudasLargoPlazo(balanceAnterior) : 0;
+    const cambioDeudas = deudasLPActual - deudasLPAnterior;
+    
+    const patrimonioActual = getPatrimonio(balanceActual);
+    const patrimonioAnterior = balanceAnterior ? getPatrimonio(balanceAnterior) : 0;
+    const cambioPatrimonioBruto = patrimonioActual - patrimonioAnterior;
+    // El cambio en patrimonio incluye la utilidad del período
+    // Flujo de financiamiento = cambio en patrimonio - utilidad (aportes/retiros)
+    const cambioPatrimonioNeto = cambioPatrimonioBruto - utilidadNeta;
+    
+    const flujoFinanciamiento = cambioDeudas + cambioPatrimonioNeto;
+    
+    const financingCashFlow = {
+      deudasLargoPlazoIniciales: deudasLPAnterior,
+      deudasLargoPlazoFinales: deudasLPActual,
+      cambioDeudas: cambioDeudas,
+      patrimonioInicial: patrimonioAnterior,
+      patrimonioFinal: patrimonioActual,
+      cambioPatrimonio: cambioPatrimonioNeto,
+      total: flujoFinanciamiento,
+    };
+    
+    // ============================================
+    // 5d. CALCULAR FLUJO NETO TOTAL
+    // ============================================
+    
+    const flujoNetoTotal = flujoOperativoTotal + flujoInversion + flujoFinanciamiento;
+    
+    // ============================================
     // 6. CALCULAR SALDOS DE EFECTIVO
     // ============================================
     
@@ -228,7 +288,10 @@ export async function GET(request: Request) {
         total: flujoOperativoTotal,
       },
       
-      flujoNetoTotal: flujoOperativoTotal, // Por ahora solo operativo (Fase 1)
+      investmentCashFlow,
+      financingCashFlow,
+      
+      flujoNetoTotal: flujoNetoTotal,
       saldoEfectivoInicial: saldoEfectivoAnterior,
       saldoEfectivoFinal: saldoEfectivoActual,
       
@@ -545,6 +608,45 @@ async function processYearData(year: string) {
         ajustesNoMonetarios.total +
         cambiosCapitalTrabajo.total;
       
+      // Calcular Flujo de Inversión
+      const activosFijosActual = getActivosFijos(balanceActual);
+      const activosFijosAnterior = balanceAnterior ? getActivosFijos(balanceAnterior) : 0;
+      const cambioActivosFijos = activosFijosActual - activosFijosAnterior;
+      const comprasNetasEstimadas = cambioActivosFijos + depreciacion;
+      const flujoInversion = -comprasNetasEstimadas;
+      
+      const investmentCashFlow = {
+        activosFijosIniciales: activosFijosAnterior,
+        activosFijosFinales: activosFijosActual,
+        depreciacionPeriodo: depreciacion,
+        comprasNetasEstimadas: comprasNetasEstimadas,
+        total: flujoInversion,
+      };
+      
+      // Calcular Flujo de Financiamiento
+      const deudasLPActual = getDeudasLargoPlazo(balanceActual);
+      const deudasLPAnterior = balanceAnterior ? getDeudasLargoPlazo(balanceAnterior) : 0;
+      const cambioDeudas = deudasLPActual - deudasLPAnterior;
+      
+      const patrimonioActual = getPatrimonio(balanceActual);
+      const patrimonioAnterior = balanceAnterior ? getPatrimonio(balanceAnterior) : 0;
+      const cambioPatrimonioBruto = patrimonioActual - patrimonioAnterior;
+      const cambioPatrimonioNeto = cambioPatrimonioBruto - utilidadNeta;
+      
+      const flujoFinanciamiento = cambioDeudas + cambioPatrimonioNeto;
+      
+      const financingCashFlow = {
+        deudasLargoPlazoIniciales: deudasLPAnterior,
+        deudasLargoPlazoFinales: deudasLPActual,
+        cambioDeudas: cambioDeudas,
+        patrimonioInicial: patrimonioAnterior,
+        patrimonioFinal: patrimonioActual,
+        cambioPatrimonio: cambioPatrimonioNeto,
+        total: flujoFinanciamiento,
+      };
+      
+      const flujoNetoTotal = flujoOperativoTotal + flujoInversion + flujoFinanciamiento;
+      
       const saldoEfectivoActual = getEfectivoYBancos(balanceActual);
       const saldoEfectivoAnterior = balanceAnterior
         ? getEfectivoYBancos(balanceAnterior)
@@ -577,7 +679,10 @@ async function processYearData(year: string) {
           total: flujoOperativoTotal,
         },
         
-        flujoNetoTotal: flujoOperativoTotal,
+        investmentCashFlow,
+        financingCashFlow,
+        
+        flujoNetoTotal: flujoNetoTotal,
         saldoEfectivoInicial: saldoEfectivoAnterior,
         saldoEfectivoFinal: saldoEfectivoActual,
         
