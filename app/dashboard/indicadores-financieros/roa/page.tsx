@@ -17,31 +17,108 @@ interface RoaData {
 }
 
 export default function RoaPage() {
-  const [allData, setAllData] = useState<RoaData[]>([])
+  const [roaData, setRoaData] = useState<RoaData[]>([])
+  const [availableYears, setAvailableYears] = useState<string[]>([])
+  const [selectedYear, setSelectedYear] = useState<string>('')
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
   const [hoveredData, setHoveredData] = useState<RoaData | null>(null)
-  const [selectedYear, setSelectedYear] = useState<number>(0)
 
+  // Cargar años disponibles al inicio
   useEffect(() => {
-    const fetchData = async () => {
+    async function fetchAvailableYears() {
       try {
-        const response = await fetch('/api/data/rentabilidad')
-        if (!response.ok) throw new Error('Error al cargar datos')
+        const res = await fetch('/api/data/balance-general')
+        if (!res.ok) throw new Error('Error al cargar años disponibles')
+        const result = await res.json()
         
-        const result = await response.json()
+        if (result.availableYears && result.availableYears.length > 0) {
+          setAvailableYears(result.availableYears)
+          setSelectedYear(result.availableYears[0])
+        }
+      } catch (err) {
+        setError(err instanceof Error ? err.message : 'Error desconocido')
+        setLoading(false)
+      }
+    }
+    fetchAvailableYears()
+  }, [])
+
+  // Cargar datos del EERR y Balance General cuando cambie el año seleccionado
+  useEffect(() => {
+    if (!selectedYear) return
+
+    async function fetchData() {
+      setLoading(true)
+      try {
+        // Obtener datos del EERR y Balance General en paralelo
+        const [eerrRes, balanceRes] = await Promise.all([
+          fetch(`/api/data/eerr?year=${selectedYear}`),
+          fetch(`/api/data/balance-general?year=${selectedYear}`)
+        ])
         
-        if (result.success && result.data) {
-          const sortedData = result.data.sort((a: RoaData, b: RoaData) => 
-            b.date.localeCompare(a.date)
-          )
-          setAllData(sortedData)
+        if (!eerrRes.ok) throw new Error('Error al cargar datos del Estado de Resultados')
+        if (!balanceRes.ok) throw new Error('Error al cargar datos del Balance General')
+        
+        const eerrResult = await eerrRes.json()
+        const balanceResult = await balanceRes.json()
+        
+        if (eerrResult.success && eerrResult.data && balanceResult.success && balanceResult.data) {
+          const monthsAvailable = eerrResult.monthsAvailable || []
+          const eerrData = eerrResult.data
+          const balanceData = balanceResult.data.months || {}
           
-          // Establecer el año más reciente como seleccionado
-          if (sortedData.length > 0) {
-            const mostRecentYear = new Date(sortedData[0].date).getFullYear()
-            setSelectedYear(mostRecentYear)
-          }
+          // Calcular ROA para cada mes
+          const calculatedRoaData: RoaData[] = monthsAvailable.map((month: string) => {
+            const monthEerr = eerrData[month]
+            const monthBalance = balanceData[month]
+            
+            if (!monthEerr || !monthEerr.summary || !monthBalance || !monthBalance.totals) {
+              return {
+                date: `${selectedYear}-${month}-01`,
+                roa: 0,
+                utilidadNeta: 0,
+                activoTotal: 0,
+                ingresos: 0,
+                gastos: 0
+              }
+            }
+            
+            const summary = monthEerr.summary
+            const totals = monthBalance.totals
+            
+            // Datos del Estado de Resultados
+            const ingresos = summary.ingresosOperacionales || 0
+            const utilidadNeta = summary.utilidadPerdida || 0
+            
+            // Calcular gastos totales
+            const costoVentas = summary.costoVentas || 0
+            const gastosAdmin = summary.gastosAdmin || 0
+            const depreciacion = summary.depreciacion || 0
+            const gastosNoOperacionales = summary.gastosNoOperacionales || 0
+            const correccionMonetaria = summary.correccionMonetaria || 0
+            const impuestoRenta = summary.impuestoRenta || 0
+            const gastosTotales = costoVentas + gastosAdmin + depreciacion + gastosNoOperacionales + correccionMonetaria + impuestoRenta
+            
+            // Datos del Balance General
+            const activoTotal = totals.totalAssets || 0
+            
+            // Calcular ROA = (Utilidad Neta / Activo Total) * 100
+            const roa = activoTotal > 0 ? (utilidadNeta / activoTotal) * 100 : 0
+            
+            return {
+              date: `${selectedYear}-${month}-01`,
+              roa: roa,
+              utilidadNeta: utilidadNeta,
+              activoTotal: activoTotal,
+              ingresos: ingresos,
+              gastos: gastosTotales
+            }
+          })
+          
+          setRoaData(calculatedRoaData)
+        } else {
+          setRoaData([])
         }
       } catch (err) {
         setError(err instanceof Error ? err.message : 'Error desconocido')
@@ -49,9 +126,8 @@ export default function RoaPage() {
         setLoading(false)
       }
     }
-
     fetchData()
-  }, [])
+  }, [selectedYear])
 
   const formatSpanishDate = (dateString: string): string => {
     const [year, month] = dateString.split('-').map(Number)
@@ -100,7 +176,7 @@ export default function RoaPage() {
     )
   }
 
-  if (!allData || allData.length === 0) {
+  if (availableYears.length === 0) {
     return (
       <div>
         <Header title='ROA - Return on Assets' subtitle='No hay datos disponibles' />
@@ -111,24 +187,26 @@ export default function RoaPage() {
     )
   }
 
-  // Obtener años disponibles
-  const availableYears = Array.from(
-    new Set(allData.map(d => new Date(d.date).getFullYear()))
-  ).sort((a, b) => b - a)
-
-  // Filtrar datos por año seleccionado
-  const filteredData = allData.filter(d => {
-    const year = new Date(d.date).getFullYear()
-    return year === selectedYear
-  })
-
-  const latestData = filteredData.length > 0 ? filteredData[0] : allData[0]
+  // El último mes disponible (más reciente) está al final del array
+  const latestData = roaData.length > 0 ? roaData[roaData.length - 1] : null
+  
+  if (!latestData) {
+    return (
+      <div>
+        <Header title='ROA - Return on Assets' subtitle='No hay datos disponibles' />
+        <div className='p-8 flex items-center justify-center'>
+          <div className='text-gray-500'>No se encontraron datos para el año {selectedYear}</div>
+        </div>
+      </div>
+    )
+  }
+  
   const displayData = hoveredData || latestData
   
   // Encontrar el mes anterior para comparación
-  const displayIndex = filteredData.findIndex(d => d.date === displayData.date)
-  const previousData = displayIndex >= 0 && displayIndex < filteredData.length - 1 
-    ? filteredData[displayIndex + 1] 
+  const displayIndex = roaData.findIndex(d => d.date === displayData.date)
+  const previousData = displayIndex > 0 
+    ? roaData[displayIndex - 1] 
     : null
   
   const cambioVsMesAnterior = previousData 
@@ -144,7 +222,7 @@ export default function RoaPage() {
     <div>
       <Header
         title='ROA - Return on Assets'
-        subtitle='Indicador de eficiencia en el uso de activos para generar utilidades'
+        subtitle='Indicador de eficiencia en el uso de activos (datos desde EERR y Balance General)'
       />
 
       <div className='p-4 sm:p-6 lg:p-8 space-y-6 sm:space-y-8'>
@@ -157,7 +235,7 @@ export default function RoaPage() {
             <select
               id='year-select'
               value={selectedYear}
-              onChange={(e) => setSelectedYear(Number(e.target.value))}
+              onChange={(e) => setSelectedYear(e.target.value)}
               className='rounded-md border-2 border-gray-400 bg-gray-50 px-3 py-2 text-sm font-medium text-gray-900 focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500'
             >
               {availableYears.map((year) => (
@@ -170,7 +248,7 @@ export default function RoaPage() {
         </div>
 
         {/* Validación de datos filtrados */}
-        {filteredData.length === 0 ? (
+        {roaData.length === 0 ? (
           <div className='p-8 text-center text-gray-500'>
             No se encontraron datos para el año {selectedYear}
           </div>
@@ -275,9 +353,9 @@ export default function RoaPage() {
           </Card>
 
           {/* Gráfico de Evolución */}
-          {filteredData.length > 1 && (
+          {roaData.length > 1 && (
             <RoaChart 
-              data={filteredData.slice(0, 12)} 
+              data={roaData.slice(0, 12)} 
               onHover={setHoveredData}
             />
           )}

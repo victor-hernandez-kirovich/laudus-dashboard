@@ -477,7 +477,7 @@ export default function FlujoCajaPage() {
                     : 'text-gray-600 hover:text-gray-800'
                 }`}
               >
-                Detallado (% Utilidad)
+                Analisis Vertical
               </button>
               <button
                 onClick={() => setActiveTab('indicadores')}

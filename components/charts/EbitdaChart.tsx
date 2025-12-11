@@ -45,8 +45,8 @@ export function EbitdaChart({ data, onHover }: EbitdaChartProps) {
     return `${months[month - 1]}`
   }
 
-  // Preparar datos para el gráfico (invertir orden para mostrar cronológicamente)
-  const chartData = [...data].reverse().map(item => ({
+  // Preparar datos para el gráfico (ya vienen ordenados cronológicamente)
+  const chartData = data.map(item => ({
     ...item,
     dateFormatted: formatSpanishDate(item.date)
   }))

@@ -19,32 +19,114 @@ interface RoiData {
 }
 
 export default function RoiPage() {
-  const [allData, setAllData] = useState<RoiData[]>([])
+  const [roiData, setRoiData] = useState<RoiData[]>([])
+  const [availableYears, setAvailableYears] = useState<string[]>([])
+  const [selectedYear, setSelectedYear] = useState<string>('')
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
   const [hoveredData, setHoveredData] = useState<RoiData | null>(null)
-  const [selectedYear, setSelectedYear] = useState<number>(0)
 
+  // Cargar años disponibles al inicio
   useEffect(() => {
-    const fetchData = async () => {
+    async function fetchAvailableYears() {
       try {
-        const response = await fetch('/api/data/rentabilidad')
-        if (!response.ok) throw new Error('Error al cargar datos')
+        const res = await fetch('/api/data/balance-general')
+        if (!res.ok) throw new Error('Error al cargar años disponibles')
+        const result = await res.json()
         
-        const result = await response.json()
+        if (result.availableYears && result.availableYears.length > 0) {
+          setAvailableYears(result.availableYears)
+          setSelectedYear(result.availableYears[0])
+        }
+      } catch (err) {
+        setError(err instanceof Error ? err.message : 'Error desconocido')
+        setLoading(false)
+      }
+    }
+    fetchAvailableYears()
+  }, [])
+
+  // Cargar datos del EERR y Balance General cuando cambie el año seleccionado
+  useEffect(() => {
+    if (!selectedYear) return
+
+    async function fetchData() {
+      setLoading(true)
+      try {
+        // Obtener datos del EERR y Balance General en paralelo
+        const [eerrRes, balanceRes] = await Promise.all([
+          fetch(`/api/data/eerr?year=${selectedYear}`),
+          fetch(`/api/data/balance-general?year=${selectedYear}`)
+        ])
         
-        if (result.success && result.data) {
-          // Ordenar datos por fecha descendente
-          const sortedData = result.data.sort((a: RoiData, b: RoiData) => 
-            b.date.localeCompare(a.date)
-          )
-          setAllData(sortedData)
+        if (!eerrRes.ok) throw new Error('Error al cargar datos del Estado de Resultados')
+        if (!balanceRes.ok) throw new Error('Error al cargar datos del Balance General')
+        
+        const eerrResult = await eerrRes.json()
+        const balanceResult = await balanceRes.json()
+        
+        if (eerrResult.success && eerrResult.data && balanceResult.success && balanceResult.data) {
+          const monthsAvailable = eerrResult.monthsAvailable || []
+          const eerrData = eerrResult.data
+          const balanceData = balanceResult.data.months || {}
           
-          // Establecer el año más reciente como seleccionado
-          if (sortedData.length > 0) {
-            const mostRecentYear = new Date(sortedData[0].date).getFullYear()
-            setSelectedYear(mostRecentYear)
-          }
+          // Calcular ROI para cada mes
+          const calculatedRoiData: RoiData[] = monthsAvailable.map((month: string) => {
+            const monthEerr = eerrData[month]
+            const monthBalance = balanceData[month]
+            
+            if (!monthEerr || !monthEerr.summary || !monthBalance || !monthBalance.totals) {
+              return {
+                date: `${selectedYear}-${month}-01`,
+                roi: 0,
+                utilidadNeta: 0,
+                patrimonio: 0,
+                ingresos: 0,
+                gastos: 0,
+                activoTotal: 0,
+                pasivoTotal: 0
+              }
+            }
+            
+            const summary = monthEerr.summary
+            const totals = monthBalance.totals
+            
+            // Datos del Estado de Resultados
+            const ingresos = summary.ingresosOperacionales || 0
+            const utilidadNeta = summary.utilidadPerdida || 0
+            
+            // Calcular gastos totales
+            const costoVentas = summary.costoVentas || 0
+            const gastosAdmin = summary.gastosAdmin || 0
+            const depreciacion = summary.depreciacion || 0
+            const gastosNoOperacionales = summary.gastosNoOperacionales || 0
+            const correccionMonetaria = summary.correccionMonetaria || 0
+            const impuestoRenta = summary.impuestoRenta || 0
+            const gastosTotales = costoVentas + gastosAdmin + depreciacion + gastosNoOperacionales + correccionMonetaria + impuestoRenta
+            
+            // Datos del Balance General
+            const activoTotal = totals.totalAssets || 0
+            const pasivoTotal = totals.totalLiabilities || 0
+            const patrimonio = totals.totalEquity || 0
+            
+            // Calcular ROI (ROE) = (Utilidad Neta / Patrimonio) * 100
+            const roi = patrimonio > 0 ? (utilidadNeta / patrimonio) * 100 : 0
+            
+            return {
+              date: `${selectedYear}-${month}-01`,
+              roi: roi,
+              utilidadNeta: utilidadNeta,
+              patrimonio: patrimonio,
+              ingresos: ingresos,
+              gastos: gastosTotales,
+              activoTotal: activoTotal,
+              pasivoTotal: pasivoTotal
+            }
+          })
+          
+          setRoiData(calculatedRoiData)
+        } else {
+          setRoiData([])
         }
       } catch (err) {
         setError(err instanceof Error ? err.message : 'Error desconocido')
@@ -52,9 +134,8 @@ export default function RoiPage() {
         setLoading(false)
       }
     }
-
     fetchData()
-  }, [])
+  }, [selectedYear])
 
   const formatSpanishDate = (dateString: string): string => {
     const [year, month] = dateString.split('-').map(Number)
@@ -103,7 +184,7 @@ export default function RoiPage() {
     )
   }
 
-  if (!allData || allData.length === 0) {
+  if (availableYears.length === 0) {
     return (
       <div>
         <Header title='ROI - Return on Investment' subtitle='No hay datos disponibles' />
@@ -114,34 +195,24 @@ export default function RoiPage() {
     )
   }
 
-  // Obtener años disponibles
-  const availableYears = Array.from(
-    new Set(allData.map(d => new Date(d.date).getFullYear()))
-  ).sort((a, b) => b - a)
-
-  // Filtrar datos por año seleccionado
-  const filteredData = allData.filter(d => {
-    const year = new Date(d.date).getFullYear()
-    return year === selectedYear
-  })
-
-  const latestData = filteredData.length > 0 ? filteredData[0] : allData[0]
+  // Obtener el último mes disponible
+  const latestData = roiData.length > 0 ? roiData[roiData.length - 1] : null
   const displayData = hoveredData || latestData
   
   // Encontrar el mes anterior para comparación
-  const displayIndex = filteredData.findIndex(d => d.date === displayData.date)
-  const previousData = displayIndex >= 0 && displayIndex < filteredData.length - 1 
-    ? filteredData[displayIndex + 1] 
+  const displayIndex = roiData.findIndex(d => d.date === displayData?.date)
+  const previousData = displayIndex > 0 
+    ? roiData[displayIndex - 1] 
     : null
   
-  const cambioVsMesAnterior = previousData 
+  const cambioVsMesAnterior = previousData && displayData
     ? displayData.roi - previousData.roi 
     : 0
   
   const tendencia = cambioVsMesAnterior > 0 ? 'up' : cambioVsMesAnterior < 0 ? 'down' : 'neutral'
 
-  const roiColor = getRoiColor(displayData.roi)
-  const roiLabel = getRoiLabel(displayData.roi)
+  const roiColor = displayData ? getRoiColor(displayData.roi) : '#ef4444'
+  const roiLabel = displayData ? getRoiLabel(displayData.roi) : 'Sin datos'
 
   return (
     <div>
@@ -160,7 +231,7 @@ export default function RoiPage() {
             <select
               id='year-select'
               value={selectedYear}
-              onChange={(e) => setSelectedYear(Number(e.target.value))}
+              onChange={(e) => setSelectedYear(e.target.value)}
               className='rounded-md border-2 border-gray-400 bg-gray-50 px-3 py-2 text-sm font-medium text-gray-900 focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500'
             >
               {availableYears.map((year) => (
@@ -172,8 +243,8 @@ export default function RoiPage() {
           </div>
         </div>
 
-        {/* Validación de datos filtrados */}
-        {filteredData.length === 0 ? (
+        {/* Validación de datos */}
+        {roiData.length === 0 || !displayData ? (
           <div className='p-8 text-center text-gray-500'>
             No se encontraron datos para el año {selectedYear}
           </div>
@@ -278,9 +349,9 @@ export default function RoiPage() {
           </Card>
 
           {/* Gráfico de Evolución */}
-          {filteredData.length > 1 && (
+          {roiData.length > 1 && (
             <RoiChart 
-              data={filteredData.slice(0, 12)} 
+              data={roiData.slice(0, 12)} 
               onHover={setHoveredData}
             />
           )}
@@ -347,20 +418,22 @@ export default function RoiPage() {
               </ul>
             </div>
 
+            {displayData && (
             <div className='bg-gray-50 p-4 rounded-lg mt-4'>
               <p className='font-semibold mb-2'>Ejemplo con tus datos actuales:</p>
               <div className='font-mono text-xs space-y-1'>
-                <p>Activo Total: {formatCurrency(latestData.activoTotal)}</p>
-                <p>(-) Pasivo Total: {formatCurrency(latestData.pasivoTotal)}</p>
-                <p className='border-t pt-1'>= Patrimonio: {formatCurrency(latestData.patrimonio)}</p>
-                <p className='mt-3'>Ingresos: {formatCurrency(latestData.ingresos)}</p>
-                <p>(-) Gastos: {formatCurrency(latestData.gastos)}</p>
-                <p className='border-t pt-1'>= Utilidad Neta: {formatCurrency(latestData.utilidadNeta)}</p>
+                <p>Activo Total: {formatCurrency(displayData.activoTotal)}</p>
+                <p>(-) Pasivo Total: {formatCurrency(displayData.pasivoTotal)}</p>
+                <p className='border-t pt-1'>= Patrimonio: {formatCurrency(displayData.patrimonio)}</p>
+                <p className='mt-3'>Ingresos: {formatCurrency(displayData.ingresos)}</p>
+                <p>(-) Gastos: {formatCurrency(displayData.gastos)}</p>
+                <p className='border-t pt-1'>= Utilidad Neta: {formatCurrency(displayData.utilidadNeta)}</p>
                 <p className='border-t pt-1 font-bold mt-2 text-green-600'>
-                  ROI = ({formatCurrency(latestData.utilidadNeta)} / {formatCurrency(latestData.patrimonio)}) × 100 = {latestData.roi.toFixed(2)}%
+                  ROI = ({formatCurrency(displayData.utilidadNeta)} / {formatCurrency(displayData.patrimonio)}) × 100 = {displayData.roi.toFixed(2)}%
                 </p>
               </div>
             </div>
+            )}
 
             <div className='bg-purple-50 border-l-4 border-purple-500 p-4 mt-4'>
               <p className='font-semibold text-purple-900 mb-2'>💡 Diferencia entre ROA y ROI (ROE):</p>

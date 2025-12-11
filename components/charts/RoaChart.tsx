@@ -35,7 +35,7 @@ export function RoaChart({ data, onHover }: RoaChartProps) {
   }
 
   // Preparar datos para el gráfico
-  const chartData = [...data].reverse().map(item => ({
+  const chartData = data.map(item => ({
     ...item,
     displayDate: formatSpanishDate(item.date)
   }))

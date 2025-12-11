@@ -16,27 +16,54 @@ interface MargenData {
   utilidadOperacional: number
 }
 
+const MONTH_NAMES = ['Ene', 'Feb', 'Mar', 'Abr', 'May', 'Jun', 'Jul', 'Ago', 'Sep', 'Oct', 'Nov', 'Dic']
+
 export default function MargenRentabilidadPage() {
-  const [allData, setAllData] = useState<any[]>([])
+  const [eerrData, setEerrData] = useState<{ [key: string]: any } | null>(null)
+  const [availableYears, setAvailableYears] = useState<string[]>([])
+  const [monthsAvailable, setMonthsAvailable] = useState<string[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
-  const [selectedYear, setSelectedYear] = useState<number>(0)
+  const [selectedYear, setSelectedYear] = useState<string>('')
 
+  // Cargar años disponibles al inicio
   useEffect(() => {
-    async function fetchData() {
+    async function fetchAvailableYears() {
       try {
-        const res = await fetch('/api/data/8columns')
-        if (!res.ok) throw new Error('Error al cargar datos')
+        // Primero obtenemos los años disponibles desde balance-general
+        const res = await fetch('/api/data/balance-general')
+        if (!res.ok) throw new Error('Error al cargar años disponibles')
         const result = await res.json()
-        const sortedData = (result.data || []).sort((a: any, b: any) => 
-          b.date.localeCompare(a.date)
-        )
-        setAllData(sortedData)
         
-        // Establecer el año más reciente como seleccionado
-        if (sortedData.length > 0) {
-          const mostRecentYear = new Date(sortedData[0].date).getFullYear()
-          setSelectedYear(mostRecentYear)
+        if (result.availableYears && result.availableYears.length > 0) {
+          setAvailableYears(result.availableYears)
+          setSelectedYear(result.availableYears[0])
+        }
+      } catch (err) {
+        setError(err instanceof Error ? err.message : 'Error desconocido')
+        setLoading(false)
+      }
+    }
+    fetchAvailableYears()
+  }, [])
+
+  // Cargar datos del EERR cuando cambie el año seleccionado
+  useEffect(() => {
+    if (!selectedYear) return
+
+    async function fetchEerrData() {
+      setLoading(true)
+      try {
+        const res = await fetch(`/api/data/eerr?year=${selectedYear}`)
+        if (!res.ok) throw new Error('Error al cargar datos del Estado de Resultados')
+        const result = await res.json()
+        
+        if (result.success && result.data) {
+          setEerrData(result.data)
+          setMonthsAvailable(result.monthsAvailable || [])
+        } else {
+          setEerrData(null)
+          setMonthsAvailable([])
         }
       } catch (err) {
         setError(err instanceof Error ? err.message : 'Error desconocido')
@@ -44,35 +71,18 @@ export default function MargenRentabilidadPage() {
         setLoading(false)
       }
     }
-    fetchData()
-  }, [])
+    fetchEerrData()
+  }, [selectedYear])
 
-  // Obtener años disponibles
-  const availableYears = Array.from(
-    new Set(allData.map(d => new Date(d.date).getFullYear()))
-  ).sort((a, b) => b - a)
-
-  // Filtrar datos por año seleccionado
-  const filteredData = allData.filter(d => {
-    const year = new Date(d.date).getFullYear()
-    return year === selectedYear
-  })
-
-  // Calcular Márgenes de Rentabilidad (Neto y Operacional) para cada fecha
+  // Calcular Márgenes de Rentabilidad desde el Estado de Resultados
   const calculateMargenRentabilidad = (): MargenData[] => {
-    return filteredData.map(record => {
-      const records = record.data || []
-      
-      // Buscar la fila "Sumas" que contiene los totales
-      const filaSumas = records.find((r: any) => r.accountName === "Sumas")
-      
-      // Buscar cuentas específicas para Margen Operacional
-      const cuenta31 = records.find((r: any) => r.accountNumber === "31") // Costo de Explotación
-      const cuenta32 = records.find((r: any) => r.accountNumber === "32") // Gastos Operacionales
-      
-      if (!filaSumas) {
+    if (!eerrData || monthsAvailable.length === 0) return []
+
+    return monthsAvailable.map(month => {
+      const monthData = eerrData[month]
+      if (!monthData || !monthData.summary) {
         return {
-          date: record.date,
+          date: `${selectedYear}-${month}-01`,
           margenNeto: 0,
           margenOperacional: 0,
           ingresos: 0,
@@ -82,28 +92,39 @@ export default function MargenRentabilidadPage() {
           utilidadOperacional: 0
         }
       }
+
+      const summary = monthData.summary
       
-      const ingresos = filaSumas.incomes || 0
-      const gastos = filaSumas.expenses || 0
-      const utilidadNeta = ingresos - gastos
+      // Datos del Estado de Resultados
+      const ingresos = summary.ingresosOperacionales || 0
+      const costoVentas = summary.costoVentas || 0
+      const gastosAdmin = summary.gastosAdmin || 0
+      const depreciacion = summary.depreciacion || 0
+      const utilidadNeta = summary.utilidadPerdida || 0
+      const utilidadOperacional = summary.resultadoOperacional || 0
       
-      // Calcular Margen Neto = (Utilidad Neta / Ingresos) * 100
+      // Total de gastos operacionales = Costo de Ventas + Gastos Admin + Depreciación
+      const gastosOperacionales = costoVentas + gastosAdmin + depreciacion
+      
+      // Total de gastos (incluyendo no operacionales e impuestos)
+      const gastosNoOperacionales = summary.gastosNoOperacionales || 0
+      const correccionMonetaria = summary.correccionMonetaria || 0
+      const impuestoRenta = summary.impuestoRenta || 0
+      const gastosTotales = gastosOperacionales + gastosNoOperacionales + correccionMonetaria + impuestoRenta
+      
+      // Calcular Margen Neto = (Utilidad Neta / Ingresos Operacionales) * 100
       const margenNeto = ingresos > 0 ? (utilidadNeta / ingresos) * 100 : 0
       
-      // Calcular Margen Operacional = (Ingresos - Gastos Operacionales) / Ingresos * 100
-      const costoExplotacion = cuenta31?.expenses || 0
-      const gastosOperacionales = cuenta32?.expenses || 0
-      const totalGastosOperacionales = costoExplotacion + gastosOperacionales
-      const utilidadOperacional = ingresos - totalGastosOperacionales
+      // Calcular Margen Operacional = (Resultado Operacional / Ingresos Operacionales) * 100
       const margenOperacional = ingresos > 0 ? (utilidadOperacional / ingresos) * 100 : 0
       
       return {
-        date: record.date,
+        date: `${selectedYear}-${month}-01`,
         margenNeto: margenNeto,
         margenOperacional: margenOperacional,
         ingresos: ingresos,
-        gastos: gastos,
-        gastosOperacionales: totalGastosOperacionales,
+        gastos: gastosTotales,
+        gastosOperacionales: gastosOperacionales,
         utilidadNeta: utilidadNeta,
         utilidadOperacional: utilidadOperacional
       }
@@ -113,7 +134,7 @@ export default function MargenRentabilidadPage() {
   if (loading) {
     return (
       <div>
-        <Header title='Margen de Rentabilidad' subtitle='Análisis de rentabilidad neta' />
+        <Header title='Margen de Rentabilidad' subtitle='Análisis de rentabilidad desde el Estado de Resultados' />
         <div className='p-8 flex items-center justify-center'>
           <div className='text-gray-600'>Cargando datos...</div>
         </div>
@@ -124,7 +145,7 @@ export default function MargenRentabilidadPage() {
   if (error) {
     return (
       <div>
-        <Header title='Margen de Rentabilidad' subtitle='Análisis de rentabilidad neta' />
+        <Header title='Margen de Rentabilidad' subtitle='Análisis de rentabilidad desde el Estado de Resultados' />
         <div className='p-8'>
           <Card>
             <div className='text-red-600'>Error: {error}</div>
@@ -134,7 +155,7 @@ export default function MargenRentabilidadPage() {
     )
   }
 
-  if (!allData || allData.length === 0) {
+  if (availableYears.length === 0) {
     return (
       <div>
         <Header title='Margen de Rentabilidad' subtitle='No hay datos disponibles' />
@@ -151,7 +172,7 @@ export default function MargenRentabilidadPage() {
     <div>
       <Header
         title='Margen de Rentabilidad'
-        subtitle='Análisis del margen de utilidad neta sobre las ventas'
+        subtitle='Análisis del margen de utilidad desde el Estado de Resultados (EERR)'
       />
 
       <div className='p-4 sm:p-6 lg:p-8 space-y-6 sm:space-y-8'>
@@ -164,7 +185,7 @@ export default function MargenRentabilidadPage() {
             <select
               id='year-select'
               value={selectedYear}
-              onChange={(e) => setSelectedYear(Number(e.target.value))}
+              onChange={(e) => setSelectedYear(e.target.value)}
               className='rounded-md border-2 border-gray-400 bg-gray-50 px-3 py-2 text-sm font-medium text-gray-900 focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500'
             >
               {availableYears.map((year) => (
@@ -182,7 +203,7 @@ export default function MargenRentabilidadPage() {
             No se encontraron datos para el año {selectedYear}
           </div>
         ) : (
-          <MargenRentabilidadChart data={margenData.slice(0, 12)} />
+          <MargenRentabilidadChart data={margenData} />
         )}
       </div>
     </div>

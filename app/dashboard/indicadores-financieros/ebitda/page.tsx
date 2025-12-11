@@ -7,16 +7,6 @@ import { EbitdaChart } from '@/components/charts/EbitdaChart'
 import { formatCurrency } from '@/lib/utils'
 import { TrendingUp, TrendingDown, Minus } from 'lucide-react'
 
-interface BalanceData {
-  date: string
-  data: Array<{
-    accountNumber: string
-    accountName: string
-    incomes: number
-    expenses: number
-  }>
-}
-
 interface EbitdaData {
   date: string
   ebitda: number
@@ -31,32 +21,51 @@ interface EbitdaData {
 }
 
 export default function EbitdaPage() {
-  const [allData, setAllData] = useState<BalanceData[]>([])
-  const [selectedYear, setSelectedYear] = useState<number>(0)
+  const [eerrData, setEerrData] = useState<{ [key: string]: any } | null>(null)
+  const [availableYears, setAvailableYears] = useState<string[]>([])
+  const [monthsAvailable, setMonthsAvailable] = useState<string[]>([])
+  const [selectedYear, setSelectedYear] = useState<string>('')
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
   const [hoveredData, setHoveredData] = useState<EbitdaData | null>(null)
 
+  // Cargar años disponibles al inicio
   useEffect(() => {
-    const fetchData = async () => {
+    async function fetchAvailableYears() {
       try {
-        const response = await fetch('/api/data/8columns')
-        if (!response.ok) throw new Error('Error al cargar datos')
+        const res = await fetch('/api/data/balance-general')
+        if (!res.ok) throw new Error('Error al cargar años disponibles')
+        const result = await res.json()
         
-        const result = await response.json()
+        if (result.availableYears && result.availableYears.length > 0) {
+          setAvailableYears(result.availableYears)
+          setSelectedYear(result.availableYears[0])
+        }
+      } catch (err) {
+        setError(err instanceof Error ? err.message : 'Error desconocido')
+        setLoading(false)
+      }
+    }
+    fetchAvailableYears()
+  }, [])
+
+  // Cargar datos del EERR cuando cambie el año seleccionado
+  useEffect(() => {
+    if (!selectedYear) return
+
+    async function fetchEerrData() {
+      setLoading(true)
+      try {
+        const res = await fetch(`/api/data/eerr?year=${selectedYear}`)
+        if (!res.ok) throw new Error('Error al cargar datos del Estado de Resultados')
+        const result = await res.json()
         
         if (result.success && result.data) {
-          // Ordenar por fecha descendente (más reciente primero)
-          const sortedData = result.data.sort((a: BalanceData, b: BalanceData) => {
-            return new Date(b.date).getTime() - new Date(a.date).getTime()
-          })
-          setAllData(sortedData)
-          
-          // Seleccionar el año más reciente por defecto
-          if (sortedData.length > 0) {
-            const mostRecentYear = new Date(sortedData[0].date).getFullYear()
-            setSelectedYear(mostRecentYear)
-          }
+          setEerrData(result.data)
+          setMonthsAvailable(result.monthsAvailable || [])
+        } else {
+          setEerrData(null)
+          setMonthsAvailable([])
         }
       } catch (err) {
         setError(err instanceof Error ? err.message : 'Error desconocido')
@@ -64,20 +73,8 @@ export default function EbitdaPage() {
         setLoading(false)
       }
     }
-
-    fetchData()
-  }, [])
-  
-  // Obtener años disponibles
-  const availableYears = Array.from(
-    new Set(allData.map(d => new Date(d.date).getFullYear()))
-  ).sort((a, b) => b - a)
-  
-  // Filtrar datos por año seleccionado
-  const filteredData = allData.filter(d => {
-    const year = new Date(d.date).getFullYear()
-    return year === selectedYear
-  })
+    fetchEerrData()
+  }, [selectedYear])
 
   const formatSpanishDate = (dateString: string): string => {
     const [year, month] = dateString.split('-').map(Number)
@@ -88,22 +85,15 @@ export default function EbitdaPage() {
     return `${months[month - 1]} ${year}`
   }
 
-  // Calcular EBITDA para cada fecha
+  // Calcular EBITDA desde el Estado de Resultados
   const calculateEbitda = (): EbitdaData[] => {
-    return filteredData.map(record => {
-      const records = record.data || []
-      
-      // Buscar cuentas necesarias
-      const filaSumas = records.find((r: any) => r.accountName === "Sumas")
-      const cuenta31 = records.find((r: any) => r.accountNumber === "31") // Costo de Explotación
-      const cuenta32 = records.find((r: any) => r.accountNumber === "32") // Gastos Operacionales
-      const cuenta3301 = records.find((r: any) => r.accountNumber === "3301") // Depreciación
-      const cuenta3401 = records.find((r: any) => r.accountNumber === "3401") // Gastos Financieros
-      const cuenta36 = records.find((r: any) => r.accountNumber === "36") // Impuestos
-      
-      if (!filaSumas) {
+    if (!eerrData || monthsAvailable.length === 0) return []
+
+    return monthsAvailable.map(month => {
+      const monthData = eerrData[month]
+      if (!monthData || !monthData.summary) {
         return {
-          date: record.date,
+          date: `${selectedYear}-${month}-01`,
           ebitda: 0,
           margenEbitda: 0,
           ingresos: 0,
@@ -115,35 +105,39 @@ export default function EbitdaPage() {
           utilidadOperacional: 0
         }
       }
+
+      const summary = monthData.summary
       
-      const ingresos = filaSumas.incomes || 0
-      const gastos = filaSumas.expenses || 0
+      // Datos del Estado de Resultados
+      const ingresos = summary.ingresosOperacionales || 0
+      const costoVentas = summary.costoVentas || 0
+      const gastosAdmin = summary.gastosAdmin || 0
+      const depreciacion = summary.depreciacion || 0
+      const gastosNoOperacionales = summary.gastosNoOperacionales || 0
+      const correccionMonetaria = summary.correccionMonetaria || 0
+      const impuestos = summary.impuestoRenta || 0
+      const utilidadOperacional = summary.resultadoOperacional || 0
       
-      const costoExplotacion = cuenta31?.expenses || 0
-      const gastosOperacionales = cuenta32?.expenses || 0
-      const totalGastosOperacionales = costoExplotacion + gastosOperacionales
+      // Total de gastos operacionales
+      const gastosOperacionales = costoVentas + gastosAdmin + depreciacion
       
-      const depreciacion = cuenta3301?.expenses || 0
-      const gastosFinancieros = cuenta3401?.expenses || 0
-      const impuestos = cuenta36?.expenses || 0
+      // Total de gastos
+      const gastosTotales = gastosOperacionales + gastosNoOperacionales + correccionMonetaria + impuestos
       
-      const utilidadOperacional = ingresos - totalGastosOperacionales
-      
-      // EBITDA = Utilidad Operacional + Depreciación + Amortización
-      // En este caso, solo tenemos depreciación registrada
+      // EBITDA = Utilidad Operacional + Depreciación
       const ebitda = utilidadOperacional + depreciacion
       
       // Margen EBITDA = (EBITDA / Ingresos) * 100
       const margenEbitda = ingresos > 0 ? (ebitda / ingresos) * 100 : 0
       
       return {
-        date: record.date,
+        date: `${selectedYear}-${month}-01`,
         ebitda: ebitda,
         margenEbitda: margenEbitda,
         ingresos: ingresos,
-        gastos: gastos,
-        gastosOperacionales: totalGastosOperacionales,
-        gastosFinancieros: gastosFinancieros,
+        gastos: gastosTotales,
+        gastosOperacionales: gastosOperacionales,
+        gastosFinancieros: gastosNoOperacionales,
         depreciacion: depreciacion,
         impuestos: impuestos,
         utilidadOperacional: utilidadOperacional
@@ -190,7 +184,7 @@ export default function EbitdaPage() {
     )
   }
 
-  if (!allData || allData.length === 0) {
+  if (availableYears.length === 0) {
     return (
       <div>
         <Header title='EBITDA' subtitle='No hay datos disponibles' />
@@ -216,7 +210,7 @@ export default function EbitdaPage() {
                 </label>
                 <select
                   value={selectedYear}
-                  onChange={(e) => setSelectedYear(Number(e.target.value))}
+                  onChange={(e) => setSelectedYear(e.target.value)}
                   className="px-4 py-2 border-2 border-gray-400 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white font-medium text-gray-900"
                 >
                   {availableYears.map((year) => (
@@ -236,15 +230,16 @@ export default function EbitdaPage() {
     )
   }
   
-  const latestEbitda = ebitdaData[0]
+  // El último mes disponible (más reciente) está al final del array
+  const latestEbitda = ebitdaData[ebitdaData.length - 1]
   
   // Usar hoveredData si existe, sino usar latestEbitda
   const displayData = hoveredData || latestEbitda
   
   // Encontrar el índice de displayData para obtener el mes anterior
   const displayIndex = ebitdaData.findIndex(d => d.date === displayData.date)
-  const previousEbitda = displayIndex >= 0 && displayIndex < ebitdaData.length - 1 
-    ? ebitdaData[displayIndex + 1] 
+  const previousEbitda = displayIndex > 0 
+    ? ebitdaData[displayIndex - 1] 
     : null
   
   // Calcular cambio vs mes anterior
@@ -278,7 +273,7 @@ export default function EbitdaPage() {
               </label>
               <select
                 value={selectedYear}
-                onChange={(e) => setSelectedYear(Number(e.target.value))}
+                onChange={(e) => setSelectedYear(e.target.value)}
                 className="px-4 py-2 border-2 border-gray-400 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white font-medium text-gray-900"
               >
                 {availableYears.map((year) => (

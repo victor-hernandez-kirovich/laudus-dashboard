@@ -248,7 +248,11 @@ export async function GET(request: Request) {
                 // Process EERR with period calculation (current - previous)
                 const eerr = processEERR(sourceData, previousMonthData);
                 monthlyData[month] = eerr;
-                sortedMonths.push(month);
+                
+                // Solo agregar el mes si no existe ya (evita duplicados)
+                if (!sortedMonths.includes(month)) {
+                    sortedMonths.push(month);
+                }
             }
 
             // Add horizontal analysis (month-to-month comparison)
