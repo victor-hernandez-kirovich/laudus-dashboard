@@ -7,6 +7,7 @@ import { formatCurrency } from '@/lib/utils'
 import { Calendar, DollarSign } from 'lucide-react'
 import type { CashFlowData, CashFlowMultipleResponse } from '@/lib/types'
 import { FlujoCajaProyectadoChart } from '@/components/charts/FlujoCajaProyectadoChart'
+import { FlujoCajaProyeccionChart, projectNextValue } from '@/components/charts/FlujoCajaProyeccionChart'
 
 const MONTH_NAMES = ['Enero', 'Febrero', 'Marzo', 'Abril', 'Mayo', 'Junio', 'Julio', 'Agosto', 'Septiembre', 'Octubre', 'Noviembre', 'Diciembre']
 
@@ -24,6 +25,10 @@ export default function FlujoCajaPage() {
   const [chartYear, setChartYear] = useState<string>('')
   const [chartYearData, setChartYearData] = useState<{ [month: string]: CashFlowData } | null>(null)
   const [chartLoading, setChartLoading] = useState(false)
+
+  // Estado para la proyección
+  const [allYearsData, setAllYearsData] = useState<{ [year: string]: { [month: string]: CashFlowData } }>({})
+  const [projectionLoading, setProjectionLoading] = useState(false)
 
   // Estado para drag scroll
   const [isDragging, setIsDragging] = useState(false)
@@ -137,6 +142,101 @@ export default function FlujoCajaPage() {
     }
     fetchChartData()
   }, [chartYear, selectedYear, yearData])
+
+  // Cargar todos los años para la proyección
+  useEffect(() => {
+    if (availableYears.length === 0) return
+
+    async function fetchAllYearsData() {
+      setProjectionLoading(true)
+      const allData: { [year: string]: { [month: string]: CashFlowData } } = {}
+
+      for (const year of availableYears) {
+        try {
+          const res = await fetch(`/api/data/flujo-caja?year=${year}`)
+          if (res.ok) {
+            const result: CashFlowMultipleResponse = await res.json()
+            if (result.success && result.data) {
+              allData[year] = result.data
+            }
+          }
+        } catch (err) {
+          console.error(`Error fetching data for year ${year}:`, err)
+        }
+      }
+
+      setAllYearsData(allData)
+      setProjectionLoading(false)
+    }
+
+    fetchAllYearsData()
+  }, [availableYears])
+
+  // Preparar datos de proyección para 2026
+  const prepareProjectionData = () => {
+    const years = Object.keys(allYearsData).sort()
+    if (years.length < 2) return null
+
+    const projectionData: Array<{
+      month: string
+      flujoOperacion: number
+      flujoInversion: number
+      flujoFinanciamiento: number
+      saldoEfectivoFinal: number
+      flujoOperacionPrev?: number
+      flujoInversionPrev?: number
+      flujoFinanciamientoPrev?: number
+      saldoEfectivoFinalPrev?: number
+    }> = []
+
+    for (let m = 1; m <= 12; m++) {
+      const monthNum = String(m).padStart(2, '0')
+
+      // Recolectar valores históricos para cada métrica
+      const operacionValues: number[] = []
+      const inversionValues: number[] = []
+      const financiamientoValues: number[] = []
+      const saldoValues: number[] = []
+
+      years.forEach(year => {
+        // La clave del mes es "YYYY-MM", ej: "2024-01", "2025-01"
+        const fullMonthKey = `${year}-${monthNum}`
+        const monthData = allYearsData[year]?.[fullMonthKey]
+        if (monthData) {
+          // Los datos están en operatingCashFlow.total, investmentCashFlow.total, etc.
+          operacionValues.push(monthData.operatingCashFlow?.total || 0)
+          inversionValues.push(monthData.investmentCashFlow?.total || 0)
+          financiamientoValues.push(monthData.financingCashFlow?.total || 0)
+          saldoValues.push(monthData.saldoEfectivoFinal || 0)
+        }
+      })
+
+      // Proyectar valores para 2026
+      const projectedOperacion = operacionValues.length >= 2 ? projectNextValue(operacionValues) : 0
+      const projectedInversion = inversionValues.length >= 2 ? projectNextValue(inversionValues) : 0
+      const projectedFinanciamiento = financiamientoValues.length >= 2 ? projectNextValue(financiamientoValues) : 0
+      const projectedSaldo = saldoValues.length >= 2 ? projectNextValue(saldoValues) : 0
+
+      // Obtener valores del año anterior (último año disponible)
+      const lastYear = years[years.length - 1]
+      const lastYearMonthKey = `${lastYear}-${monthNum}`
+      const lastYearData = allYearsData[lastYear]?.[lastYearMonthKey]
+
+      projectionData.push({
+        month: MONTH_NAMES[m - 1],
+        flujoOperacion: projectedOperacion,
+        flujoInversion: projectedInversion,
+        flujoFinanciamiento: projectedFinanciamiento,
+        saldoEfectivoFinal: projectedSaldo,
+        flujoOperacionPrev: lastYearData?.operatingCashFlow?.total,
+        flujoInversionPrev: lastYearData?.investmentCashFlow?.total,
+        flujoFinanciamientoPrev: lastYearData?.financingCashFlow?.total,
+        saldoEfectivoFinalPrev: lastYearData?.saldoEfectivoFinal
+      })
+    }
+
+    return projectionData
+  }
 
   if (loading && !yearData) {
     return (
@@ -822,6 +922,52 @@ export default function FlujoCajaPage() {
             ) : (
               <div className="h-[700px] flex items-center justify-center">
                 <div className="text-gray-500">No hay datos disponibles para {chartYear}</div>
+              </div>
+            )}
+          </div>
+        </Card>
+
+        {/* Gráfico de Proyección 2026 */}
+        <Card>
+          <div className="p-6">
+            <div className="mb-4">
+              <div className="flex justify-between items-start flex-wrap gap-2">
+                <div>
+                  <h3 className="text-lg font-bold text-gray-900">
+                    🔮 Proyección Flujo de Caja 2026
+                  </h3>
+                  <p className="text-sm text-gray-600">
+                    Proyección lineal basada en tendencias históricas
+                  </p>
+                </div>
+                <div className="bg-purple-100 px-3 py-1.5 rounded-lg">
+                  <span className="text-sm font-medium text-purple-700">Regresión Lineal</span>
+                </div>
+              </div>
+              <div className="mt-3 p-3 bg-purple-50 rounded-lg border border-purple-200">
+                <p className="text-xs font-semibold text-purple-900 mb-1">
+                  💡 Metodología:
+                </p>
+                <p className="text-xs text-purple-800">
+                  Se aplica regresión lineal (Y = a + bX) a los datos históricos de cada mes para proyectar los valores de 2026.
+                </p>
+                <p className="text-xs text-purple-700 mt-1">
+                  Las líneas punteadas indican valores proyectados. El % muestra la variación respecto al año anterior.
+                </p>
+              </div>
+            </div>
+            {projectionLoading ? (
+              <div className="h-[700px] flex items-center justify-center">
+                <div className="text-gray-500 animate-pulse">Calculando proyección...</div>
+              </div>
+            ) : Object.keys(allYearsData).length >= 2 ? (
+              <FlujoCajaProyeccionChart
+                data={prepareProjectionData()}
+                projectionYear={2026}
+              />
+            ) : (
+              <div className="h-[700px] flex items-center justify-center">
+                <div className="text-gray-500">Se necesitan al menos 2 años de datos históricos para generar la proyección</div>
               </div>
             )}
           </div>
