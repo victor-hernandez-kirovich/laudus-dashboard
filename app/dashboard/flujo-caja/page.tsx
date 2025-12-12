@@ -6,6 +6,7 @@ import { Card } from '@/components/ui/Card'
 import { formatCurrency } from '@/lib/utils'
 import { Calendar, DollarSign } from 'lucide-react'
 import type { CashFlowData, CashFlowMultipleResponse } from '@/lib/types'
+import { FlujoCajaProyectadoChart } from '@/components/charts/FlujoCajaProyectadoChart'
 
 const MONTH_NAMES = ['Enero', 'Febrero', 'Marzo', 'Abril', 'Mayo', 'Junio', 'Julio', 'Agosto', 'Septiembre', 'Octubre', 'Noviembre', 'Diciembre']
 
@@ -18,6 +19,11 @@ export default function FlujoCajaPage() {
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
   const [activeTab, setActiveTab] = useState<TabType>('general')
+
+  // Estado independiente para el gráfico
+  const [chartYear, setChartYear] = useState<string>('')
+  const [chartYearData, setChartYearData] = useState<{ [month: string]: CashFlowData } | null>(null)
+  const [chartLoading, setChartLoading] = useState(false)
 
   // Estado para drag scroll
   const [isDragging, setIsDragging] = useState(false)
@@ -62,6 +68,7 @@ export default function FlujoCajaPage() {
         if (result.availableYears && result.availableYears.length > 0) {
           setAvailableYears(result.availableYears)
           setSelectedYear(result.availableYears[0])
+          setChartYear(result.availableYears[0])
         }
       } catch (err) {
         console.error('Error fetching available years:', err)
@@ -98,6 +105,38 @@ export default function FlujoCajaPage() {
     }
     fetchYearData()
   }, [selectedYear])
+
+  // Cargar datos para el gráfico independientemente
+  useEffect(() => {
+    if (!chartYear) return
+
+    // Si el año del gráfico es el mismo que el de la tabla, usar los mismos datos
+    if (chartYear === selectedYear && yearData) {
+      setChartYearData(yearData)
+      return
+    }
+
+    async function fetchChartData() {
+      try {
+        setChartLoading(true)
+        const res = await fetch(`/api/data/flujo-caja?year=${chartYear}`)
+        if (!res.ok) throw new Error('Error al cargar datos del gráfico')
+        const result: CashFlowMultipleResponse = await res.json()
+
+        if (result.success && result.data) {
+          setChartYearData(result.data)
+        } else {
+          setChartYearData(null)
+        }
+      } catch (err) {
+        console.error('Error fetching chart data:', err)
+        setChartYearData(null)
+      } finally {
+        setChartLoading(false)
+      }
+    }
+    fetchChartData()
+  }, [chartYear, selectedYear, yearData])
 
   if (loading && !yearData) {
     return (
@@ -463,6 +502,24 @@ export default function FlujoCajaPage() {
     }
   }
 
+  // Preparar datos para el gráfico de flujo de caja proyectado
+  const prepareFlujoCajaChartData = () => {
+    if (!chartYearData) return []
+    const chartMonths = Object.keys(chartYearData).sort()
+    return chartMonths.map((month) => {
+      const data = chartYearData[month]
+      const monthIndex = parseInt(month.split('-')[1]) - 1
+      return {
+        month: month,
+        monthName: MONTH_NAMES[monthIndex],
+        flujoOperacion: data?.operatingCashFlow?.total || 0,
+        flujoInversion: data?.investmentCashFlow?.total || 0,
+        flujoFinanciamiento: data?.financingCashFlow?.total || 0,
+        saldoEfectivoFinal: data?.saldoEfectivoFinal || 0,
+      }
+    })
+  }
+
   const renderHorizontalView = () => (
     <div
       className={`overflow-auto ${isDragging ? 'cursor-grabbing' : 'cursor-grab'}`}
@@ -713,6 +770,60 @@ export default function FlujoCajaPage() {
                 <p className="ml-4">Al usar el método indirecto, algunos valores de inversión y financiamiento son estimaciones basadas en cambios del balance. Para un detalle exacto se requiere información de transacciones individuales.</p>
               </div>
             </div>
+          </div>
+        </Card>
+
+        {/* Gráfico de Flujo de Caja Proyectado */}
+        <Card>
+          <div className="p-6">
+            <div className="mb-4">
+              <div className="flex justify-between items-start flex-wrap gap-2">
+                <div>
+                  <h3 className="text-lg font-bold text-gray-900">
+                    📈 Evolución del Flujo de Caja
+                  </h3>
+                  <p className="text-sm text-gray-600">
+                    Comparación mensual de los flujos de operación, inversión, financiamiento y saldo final
+                  </p>
+                </div>
+                <select
+                  value={chartYear}
+                  onChange={(e) => setChartYear(e.target.value)}
+                  className="px-3 py-1.5 border-2 border-blue-400 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white font-medium text-gray-900 text-sm"
+                >
+                  {availableYears.map((year) => (
+                    <option key={`chart-year-${year}`} value={year}>
+                      {year}
+                    </option>
+                  ))}
+                </select>
+              </div>
+              <div className="mt-3 p-3 bg-gray-50 rounded-lg border border-gray-200">
+                <p className="text-xs font-semibold text-gray-900 mb-1">
+                  💡 Interpretación del gráfico:
+                </p>
+                <div className="grid grid-cols-2 gap-2 text-xs">
+                  <p className="text-green-700">● <strong>Flujo de Operación:</strong> Efectivo del negocio</p>
+                  <p className="text-red-700">● <strong>Flujo de Inversión:</strong> Compra/venta de activos</p>
+                  <p className="text-orange-700">● <strong>Flujo de Financiamiento:</strong> Deudas y capital</p>
+                  <p className="text-blue-700">● <strong>Saldo Final:</strong> Efectivo disponible</p>
+                </div>
+              </div>
+            </div>
+            {chartLoading ? (
+              <div className="h-[700px] flex items-center justify-center">
+                <div className="text-gray-500 animate-pulse">Cargando gráfico...</div>
+              </div>
+            ) : chartYearData ? (
+              <FlujoCajaProyectadoChart
+                data={prepareFlujoCajaChartData()}
+                selectedYear={parseInt(chartYear)}
+              />
+            ) : (
+              <div className="h-[700px] flex items-center justify-center">
+                <div className="text-gray-500">No hay datos disponibles para {chartYear}</div>
+              </div>
+            )}
           </div>
         </Card>
       </div>

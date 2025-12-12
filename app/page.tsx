@@ -5,13 +5,12 @@ import { Header } from '@/components/layout/Header'
 import RatioCirculantePage from './dashboard/indicadores-financieros/ratio-circulante/page'
 import CapitalTrabajoPage from './dashboard/indicadores-financieros/capital-trabajo/page'
 import EstructuraFinancieraPage from './dashboard/indicadores-financieros/estructura-financiera/page'
-import DiasCobroPagoPage from './dashboard/indicadores-financieros/dias-cobro-pago/page'
 import MargenRentabilidadPage from './dashboard/indicadores-financieros/margen-rentabilidad/page'
 import EbitdaPage from './dashboard/indicadores-financieros/ebitda/page'
 import RoaPage from './dashboard/indicadores-financieros/roa/page'
 import RoiPage from './dashboard/indicadores-financieros/roi/page'
 
-type IndicatorTab = 'ratio-liquidez' | 'capital-trabajo' | 'estructura-financiera' | 'dias-cobro-pago' | 'margen-rentabilidad' | 'ebitda' | 'roa' | 'roi'
+type IndicatorTab = 'ratio-liquidez' | 'capital-trabajo' | 'estructura-financiera' | 'margen-rentabilidad' | 'ebitda' | 'roa' | 'roi'
 
 export default function HomePage() {
   const [activeTab, setActiveTab] = useState<IndicatorTab>('ratio-liquidez')
@@ -20,7 +19,6 @@ export default function HomePage() {
     { id: 'ratio-liquidez' as const, label: 'Ratio Liquidez' },
     { id: 'capital-trabajo' as const, label: 'Capital Trabajo' },
     { id: 'estructura-financiera' as const, label: 'Estructura Financiera' },
-    { id: 'dias-cobro-pago' as const, label: 'Días Cobro/Pago' },
     { id: 'margen-rentabilidad' as const, label: 'Margen Rentabilidad' },
     { id: 'ebitda' as const, label: 'EBITDA' },
     { id: 'roa' as const, label: 'ROA' },
@@ -35,8 +33,6 @@ export default function HomePage() {
         return <CapitalTrabajoPage />
       case 'estructura-financiera':
         return <EstructuraFinancieraPage />
-      case 'dias-cobro-pago':
-        return <DiasCobroPagoPage />
       case 'margen-rentabilidad':
         return <MargenRentabilidadPage />
       case 'ebitda':
